@@ -208,6 +208,38 @@ morador_2_rules = [
     ctrl.Rule(temperatura_do_ar['Very hot'] & inicio_do_banho['Very delayed'], duracao_do_banho['No shower'])
 ]
 
+morador_3_rules = [
+    ctrl.Rule(temperatura_do_ar['Very cold'] & inicio_do_banho['Very early'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_do_ar['Cold'] & inicio_do_banho['Very early'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_do_ar['Pleasant'] & inicio_do_banho['Very early'], duracao_do_banho['Fast']),
+    ctrl.Rule(temperatura_do_ar['Hot'] & inicio_do_banho['Very early'], duracao_do_banho['Long']),
+    ctrl.Rule(temperatura_do_ar['Very hot'] & inicio_do_banho['Very early'], duracao_do_banho['Long']),
+
+    ctrl.Rule(temperatura_do_ar['Very cold'] & inicio_do_banho['Early'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_do_ar['Cold'] & inicio_do_banho['Early'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_do_ar['Pleasant'] & inicio_do_banho['Early'], duracao_do_banho['Normal']),
+    ctrl.Rule(temperatura_do_ar['Hot'] & inicio_do_banho['Early'], duracao_do_banho['Normal']),
+    ctrl.Rule(temperatura_do_ar['Very hot'] & inicio_do_banho['Early'], duracao_do_banho['Normal']),
+
+    ctrl.Rule(temperatura_do_ar['Very cold'] & inicio_do_banho['On time'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_do_ar['Cold'] & inicio_do_banho['On time'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_do_ar['Pleasant'] & inicio_do_banho['On time'], duracao_do_banho['Normal']),
+    ctrl.Rule(temperatura_do_ar['Hot'] & inicio_do_banho['On time'], duracao_do_banho['Long']),
+    ctrl.Rule(temperatura_do_ar['Very hot'] & inicio_do_banho['On time'], duracao_do_banho['Long']),
+
+    ctrl.Rule(temperatura_do_ar['Very cold'] & inicio_do_banho['Delayed'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_do_ar['Cold'] & inicio_do_banho['Delayed'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_do_ar['Pleasant'] & inicio_do_banho['Delayed'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_do_ar['Hot'] & inicio_do_banho['Delayed'], duracao_do_banho['Very fast']),
+    ctrl.Rule(temperatura_do_ar['Very hot'] & inicio_do_banho['Delayed'], duracao_do_banho['Fast']),
+
+    ctrl.Rule(temperatura_do_ar['Very cold'] & inicio_do_banho['Very delayed'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_do_ar['Cold'] & inicio_do_banho['Very delayed'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_do_ar['Pleasant'] & inicio_do_banho['Very delayed'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_do_ar['Hot'] & inicio_do_banho['Very delayed'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_do_ar['Very hot'] & inicio_do_banho['Very delayed'], duracao_do_banho['No shower'])
+]
+
 # Mapeia a quantidade de morador para o conjunto de regras
 rules_map = {
     1: morador_1_rules,
