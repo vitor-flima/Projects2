@@ -129,8 +129,9 @@ else:
 temperatura_do_ar['Very cold'] = fuzz.trimf(temperatura_do_ar.universe, [temperatura_minima, temperatura_minima, temperatura_minima + step_temp])
 temperatura_do_ar['Cold'] = fuzz.trimf(temperatura_do_ar.universe, [temperatura_minima, temperatura_minima + step_temp, temperatura_minima + 2 * step_temp])
 temperatura_do_ar['Pleasant'] = fuzz.trimf(temperatura_do_ar.universe, [temperatura_minima + step_temp, temperatura_minima + 2 * step_temp, temperatura_minima + 3 * step_temp])
-temperatura_do_ar['Hot'] = fuzz.trimf(temperatura_do_ar.universe, [temperatura_minima + 2 * step_temp, temperatura_do_ar.universe.max(), temperatura_do_ar.universe.max()]) # Corrected Hot range
-temperatura_do_ar['Very hot'] = fuzz.trimf(temperatura_do_ar.universe, [temperatura_do_ar.universe.max(), temperatura_do_ar.universe.max(), temperatura_do_ar.universe.max()]) # Corrected Very hot range
+# Corrected Hot and Very Hot ranges to ensure they are within the universe and have correct triangular/trapezoidal shapes
+temperatura_do_ar['Hot'] = fuzz.trimf(temperatura_do_ar.universe, [temperatura_minima + 2 * step_temp, temperatura_minima + 3 * step_temp, temperatura_maxima])
+temperatura_do_ar['Very hot'] = fuzz.trimf(temperatura_do_ar.universe, [temperatura_minima + 3 * step_temp, temperatura_maxima, temperatura_maxima])
 
 
 # Passo 4: Definindo funções de pertinência para a variável de saída (Mantido como antes)
@@ -150,6 +151,7 @@ morador_1_rules = [
     ctrl.Rule(temperatura_do_ar['Very hot'] & inicio_do_banho['Very early'], duracao_do_banho['Long']),
 
     ctrl.Rule(temperatura_do_ar['Very cold'] & inicio_do_banho['Early'], duracao_do_banho['Very fast']),
+    # Corrected typo here
     ctrl.Rule(temperatura_do_ar['Cold'] & inicio_do_banho['Early'], duracao_do_banho['Fast']),
     ctrl.Rule(temperatura_do_ar['Pleasant'] & inicio_do_banho['Early'], duracao_do_banho['Normal']),
     ctrl.Rule(temperatura_do_ar['Hot'] & inicio_do_banho['Early'], duracao_do_banho['Normal']),
