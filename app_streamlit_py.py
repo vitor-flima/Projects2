@@ -93,8 +93,8 @@ verificar_a_cada_n_simulacoes = st.sidebar.number_input("Verificar convergência
 n_simulacoes_maximo = st.sidebar.number_input("Máximo de simulações:", min_value=1, value=5000, step=100)
 
 st.sidebar.markdown("---") # Separator
-st.sidebar.subheader("Opções de Visualização")
-show_membership_functions = st.sidebar.checkbox("Mostrar Funções de Pertinência Fuzzy")
+# Removed the checkbox for showing membership functions
+# show_membership_functions = st.sidebar.checkbox("Mostrar Funções de Pertinência Fuzzy")
 
 
 # Passo 2: Definindo as variáveis fuzzy
@@ -148,7 +148,7 @@ morador_1_rules = [
     ctrl.Rule(temperatura_do_ar['Cold'] & inicio_do_banho['Very early'], duracao_do_banho['Fast']),
     ctrl.Rule(temperatura_do_ar['Pleasant'] & inicio_do_banho['Very early'], duracao_do_banho['Normal']),
     ctrl.Rule(temperatura_do_ar['Hot'] & inicio_do_banho['Very early'], duracao_do_banho['Normal']),
-    ctrl.Rule(temperatura_do_ar['Very hot'] & inicio_do_banho['Very early'], duracao_do_banho['Long']), # Corrected typo here
+    ctrl.Rule(temperatura_do_ar['Very hot'] & inicio_do_banho['Very early'], duracao_do_banho['Long']),
 
     ctrl.Rule(temperatura_do_ar['Very cold'] & inicio_do_banho['Early'], duracao_do_banho['Very fast']),
     ctrl.Rule(temperatura_do_ar['Cold'] & inicio_do_banho['Early'], duracao_do_banho['Fast']),
@@ -313,31 +313,6 @@ st.write(f"Lista criada com {len(moradores_predio)} moradores para todo o prédi
 
 # Calculate the total number of bathrooms in the building (assuming each apartment has the same quantity)
 total_banheiros_predio = total_apartamentos * quantidade_banheiros_por_apartamento
-
-
-# --- Visualize Fuzzy Membership Functions (if option is selected) ---
-if show_membership_functions:
-    st.subheader("Funções de Pertinência Fuzzy")
-
-    # Input variable: inicio_do_banho
-    fig_inicio_do_banho, ax_inicio = plt.subplots()
-    inicio_do_banho.view(ax=ax_inicio)
-    st.pyplot(fig_inicio_do_banho)
-    plt.close(fig_inicio_do_banho)
-
-    # Input variable: temperatura_do_ar
-    fig_temperatura_do_ar, ax_temp = plt.subplots()
-    temperatura_do_ar.view(ax=ax_temp)
-    st.pyplot(fig_temperatura_do_ar)
-    plt.close(fig_temperatura_do_ar)
-
-    # Output variable: duracao_do_banho
-    fig_duracao_do_banho, ax_duracao = plt.subplots()
-    duracao_do_banho.view(ax=ax_duracao)
-    st.pyplot(fig_duracao_do_banho)
-    plt.close(fig_duracao_do_banho)
-
-    st.markdown("---") # Separator
 
 
 # Main loop over each temperature to be simulated - Executes only if there are valid temperatures
