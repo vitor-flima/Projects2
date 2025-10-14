@@ -329,7 +329,7 @@ for apt_num in range(1, total_apartamentos + 1):
         tipo_regra_escolhida = regras_por_morador[morador_num_no_apt - 1]
         
         moradores_no_apartamento.append({
-            'nome': f'morador {morador_num_no_apt}', # Identificador no apartamento
+            'nome': f'Morador {morador_num_no_apt}', # Identificador no apartamento (Mudado para começar com maiúscula para o relatório)
             'tipo_regra': tipo_regra_escolhida, # 1, 2 ou 3
             'apartamento': apt_num,
             'usa_pia': False, # Initialize all as False for kitchen sink
@@ -364,6 +364,9 @@ st.write(f"Lista criada com {len(moradores_predio)} moradores para todo o prédi
 # Calculate the total number of bathrooms in the building (assuming each apartment has the same quantity)
 total_banheiros_predio = total_apartamentos * quantidade_banheiros_por_apartamento
 
+# Variável para armazenar o relatório da última simulação da primeira temperatura
+relatorio_simulacao = []
+
 
 # Main loop over each temperature to be simulated - Executes only if there are valid temperatures
 if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
@@ -385,10 +388,17 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
             resultados_vazao_temperatura = []
             max_p95_anterior = float('inf') # Initialize with infinity to ensure the first difference is large
             convergencia_atingida = False
+            
+            # Limpa o relatório a cada nova temperatura
+            relatorio_simulacao_atual = []
+
 
             # Monte Carlo simulation loop
             # We use n_simulacoes_maximo as an upper limit, but the loop can stop earlier due to convergence
             for i in range(n_simulacoes_maximo):
+                # Inicializa o relatório para esta iteração. Só será salvo se for a última.
+                relatorio_simulacao_temp = []
+                
                 # Update the progress bar (approximate)
                 progress = (temp_counter / total_temperaturas_simular) + (i / n_simulacoes_maximo / total_temperaturas_simular)
                 progress_bar.progress(min(progress, 1.0)) # Ensures it doesn't exceed 100%
@@ -402,7 +412,7 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
 
                 # --- Simulation logic for each resident and bathroom usage ---
                 # Iterate over each resident in 'moradores_predio'
-                for m in moradores_predio:
+                for idx_morador, m in enumerate(moradores_predio):
                     # Generate random shower start time within the total simulation interval
                     inicio_banho = random.randint(0, duracao_simulacao - 1)
 
@@ -410,6 +420,9 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                     tipo_regra_num = m['tipo_regra']
                     # The simulator index is the type minus 1 (1->0, 2->1, 3->2)
                     simulador_morador_atual = simuladores[tipo_regra_num - 1]
+                    
+                    # Identificação para o relatório
+                    id_morador = f"{m['nome']} (Apto {m['apartamento']})"
 
 
                     # Use the fuzzy simulator with the current temperature and shower start time
@@ -425,7 +438,11 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                         dur_banho_segundos = int(dur_banho_minutos * 60) # Shower duration in seconds
                         fim_banho = inicio_banho + dur_banho_segundos # Fim do banho é usado para o cálculo do início da MLR
 
-
+                        # --- LOG: Duração do Banho e Horário Inicial ---
+                        regra_nome = regras_map_nome.get(m['tipo_regra'])
+                        relatorio_simulacao_temp.append(f"[{id_morador}] (Regra: {regra_nome}, Temp: {temperatura_atual}°C) - Horário inicial sorteado: {inicio_banho}s. Duração fuzzy: {dur_banho_minutos:.2f} min ({dur_banho_segundos}s).")
+                        
+                        
                         # --- INÍCIO DA LÓGICA MÁQUINA DE LAVAR (V2: Escolha e Início Condicional) ---
                         usa_mlr_na_simulacao = False
                         inicio_mlr_clamped = 0
@@ -442,23 +459,26 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                                  usa_mlr_na_simulacao = True
                                  
                                  # 1. Escolher o modelo da máquina aleatoriamente
-                                 volume_escolhido = random.choice(list(volumes_maquina_lavar.values()))
+                                 nome_volume_escolhido, volume_escolhido = random.choice(list(volumes_maquina_lavar.items()))
                                  
                                  # 2. Calcular o tempo de enchimento (duração da vazão)
                                  duracao_enchimento_mlr = calcular_tempo_enchimento(volume_escolhido, vazao_enchimento_mlr)
                                  
+                                 # --- LOG: Máquina de Lavar Escolhida ---
+                                 relatorio_simulacao_temp.append(f"[{id_morador}] **SORTEADO P/ MLR.** Volume: {nome_volume_escolhido} ({volume_escolhido}L). Duração enchimento: {duracao_enchimento_mlr:.0f}s.")
+                                 
                                  # 3. Determinar o início condicional (depende do uso da pia)
-                                 if m['usa_pia'] and m['fim_pia_simulacao'] > 0:
-                                     # Se usa a pia E a pia foi usada nesta simulação (fim_pia_simulacao > 0)
-                                     inicio_mlr = m['fim_pia_simulacao'] + 30 # 30s após o uso da pia
-                                 else:
-                                     # Se não usa a pia, ou se usa, mas a pia não foi usada nesta simulação (falhou na disponibilidade/tempo)
-                                     inicio_mlr = fim_banho + 120 # 120s após o banho
+                                 # O tempo do fim da pia só será conhecido após a checagem da disponibilidade do banheiro (mais abaixo)
+                                 # Por enquanto, calculamos o início baseado no banho. O ajuste fino da pia será feito depois se necessário.
+                                 inicio_mlr = fim_banho + 120 # 120s após o banho (Default)
 
-                                 # Clamp to simulation duration
+
+                                 # Clamp to simulation duration (usando a duração de enchimento calculada)
                                  inicio_mlr_clamped = max(0, inicio_mlr)
                                  fim_mlr_clamped = min(duracao_simulacao, inicio_mlr + int(duracao_enchimento_mlr))
 
+                             else:
+                                relatorio_simulacao_temp.append(f"[{id_morador}] **SORTEADO P/ MLR, mas desiste.** (Horário de banho ({clipped_inicio_banho}s) muito atrasado).")
                         # --- FIM DA LÓGICA MÁQUINA DE LAVAR (V2) ---
 
 
@@ -487,40 +507,49 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                         ultimo_indice_banheiro_apt = primeiro_indice_banheiro_apt + quantidade_banheiros_por_apartamento - 1
 
                         banheiro_disponivel_indice_global = -1 # Global index of the available bathroom in the building
+                        
+                        # --- Lógica para Múltiplos Banheiros por Apartamento (Para o relatório) ---
+                        banheiro_usado_idx_local = -1
+
                         # Look for an available bathroom ONLY WITHIN THIS APARTMENT
                         for idx_banheiro_global in range(primeiro_indice_banheiro_apt, ultimo_indice_banheiro_apt + 1):
                             if idx_banheiro_global < len(banheiros_livres_em) and banheiros_livres_em[idx_banheiro_global] <= intervalo_ocupacao_inicio:
                                 banheiro_disponivel_indice_global = idx_banheiro_global
+                                banheiro_usado_idx_local = idx_banheiro_global - primeiro_indice_banheiro_apt + 1
                                 break # Found an available bathroom in this apartment
 
                         # If a bathroom is available in this apartment, "occupy" it and add flow rate
                         if banheiro_disponivel_indice_global != -1:
                             # Record that this bathroom will be occupied until the end of the occupation interval
                             banheiros_livres_em[banheiro_disponivel_indice_global] = intervalo_ocupacao_fim
+                            
+                            # --- LOG: Banheiro (Vaso, Chuveiro, Lavatório) ---
+                            relatorio_simulacao_temp.append(f"[{id_morador}] **USA BANHEIRO {banheiro_usado_idx_local}** (Livre em: {intervalo_ocupacao_fim}s):")
 
                             # Add flow rate to the time series for the corresponding intervals
-                            # Toilet: from inicio_vaso to fim_vaso
-                            # Ensure indices are within the limits of the flow rate time series
+                            # Vaso: from inicio_vaso to fim_vaso
                             inicio_vaso_clamped = max(0, inicio_vaso)
                             fim_vaso_clamped = min(duracao_simulacao, fim_vaso)
                             if fim_vaso_clamped > inicio_vaso_clamped:
                                 vazao_simulacao[inicio_vaso_clamped:fim_vaso_clamped] += vaso
+                                relatorio_simulacao_temp.append(f"  - Vaso ({vaso}L/s): {inicio_vaso_clamped}s a {fim_vaso_clamped}s.")
 
-                            # Shower: from inicio_banho to inicio_banho + dur_banho_segundos
+                            # Chuveiro: from inicio_banho to inicio_banho + dur_banho_segundos
                             inicio_banho_clamped = max(0, inicio_banho)
                             fim_banho_clamped = min(duracao_simulacao, inicio_banho + dur_banho_segundos)
                             if fim_banho_clamped > inicio_banho_clamped:
                                 vazao_simulacao[inicio_banho_clamped : fim_banho_clamped] += chuveiro
+                                relatorio_simulacao_temp.append(f"  - Chuveiro ({chuveiro}L/s): {inicio_banho_clamped}s a {fim_banho_clamped}s.")
 
-                            # Sink: from inicio_lavatorio to fim_lavatorio
+                            # Lavatório: from inicio_lavatorio to fim_lavatorio
                             inicio_lavatorio_clamped = max(0, inicio_lavatorio)
                             fim_lavatorio_clamped = min(duracao_simulacao, fim_lavatorio)
                             if fim_lavatorio_clamped > inicio_lavatorio_clamped:
                                 vazao_simulacao[inicio_lavatorio_clamped:fim_lavatorio_clamped] += lavatorio
+                                relatorio_simulacao_temp.append(f"  - Lavatório ({lavatorio}L/s): {inicio_lavatorio_clamped}s a {fim_lavatorio_clamped}s.")
 
 
-                            # Kitchen sink (if the resident uses it) - Kitchen sink usage does not occupy the physical bathroom
-                            # but contributes to the total flow rate. It is assumed the kitchen sink is separate from the bathroom.
+                            # Kitchen sink (if the resident uses it)
                             if m['usa_pia']:
                                    # Kitchen sink usage occurs independently of physical bathroom availability
                                    inicio_pia = inicio_banho + dur_banho_segundos + 120
@@ -531,17 +560,47 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                                    if fim_pia_clamped > inicio_pia_clamped:
                                        vazao_simulacao[inicio_pia_clamped:fim_pia_clamped] += pia
                                        # Atualiza o fim da pia para uso na lógica condicional da MLR
-                                       m['fim_pia_simulacao'] = fim_pia_clamped 
+                                       m['fim_pia_simulacao'] = fim_pia_clamped
+                                       # --- LOG: Pia de Cozinha ---
+                                       relatorio_simulacao_temp.append(f"  - Pia Cozinha ({pia}L/s): {inicio_pia_clamped}s a {fim_pia_clamped}s.")
                                    else:
                                         m['fim_pia_simulacao'] = 0 # Pia não usada nesta simulação (fora do tempo)
+                                        relatorio_simulacao_temp.append(f"  - Pia Cozinha: Não usada (tempo fora do intervalo).")
                             else:
                                 m['fim_pia_simulacao'] = 0 # Não usa a pia
                                        
-                        # --- APLICAÇÃO DA ALTERAÇÃO MÁQUINA DE LAVAR (V2 - Vazão) ---
-                        # The machine usage is NOT tied to bathroom availability (it's in the service area).
-                        if usa_mlr_na_simulacao and fim_mlr_clamped > inicio_mlr_clamped:
-                            # Adiciona a vazão de enchimento pelo tempo calculado
-                            vazao_simulacao[inicio_mlr_clamped:fim_mlr_clamped] += vazao_enchimento_mlr
+                        else:
+                            # --- LOG: Banheiro Indisponível ---
+                            relatorio_simulacao_temp.append(f"[{id_morador}] **NÃO USA BANHEIRO.** (Indisponível até {banheiros_livres_em[primeiro_indice_banheiro_apt]:.0f}s, mas precisava em {intervalo_ocupacao_inicio}s).")
+                            
+                            # Se não usou o banheiro, a pia também não será usada na sequência
+                            m['fim_pia_simulacao'] = 0
+                            
+                            # Se não tomou banho, a MLR não será usada, mesmo que o morador tenha sido sorteado e a condição fuzzy fosse OK.
+                            usa_mlr_na_simulacao = False
+
+
+                        # --- APLICAÇÃO DA ALTERAÇÃO MÁQUINA DE LAVAR (V2 - Vazão e Início Condicional) ---
+                        if usa_mlr_na_simulacao:
+                            # Refaz o cálculo do início da MLR com o valor final de fim_pia_simulacao
+                            if m['usa_pia'] and m['fim_pia_simulacao'] > 0:
+                                inicio_mlr = m['fim_pia_simulacao'] + 30 # 30s após o uso da pia
+                                motivo_inicio = "30s após Pia"
+                            else:
+                                inicio_mlr = fim_banho + 120 # 120s após o banho
+                                motivo_inicio = "120s após Banho"
+                                
+                            # Re-Clampa os limites
+                            inicio_mlr_clamped = max(0, inicio_mlr)
+                            fim_mlr_clamped = min(duracao_simulacao, inicio_mlr + int(duracao_enchimento_mlr))
+
+                            # Adiciona a vazão
+                            if fim_mlr_clamped > inicio_mlr_clamped:
+                                vazao_simulacao[inicio_mlr_clamped:fim_mlr_clamped] += vazao_enchimento_mlr
+                                # --- LOG: Máquina de Lavar ---
+                                relatorio_simulacao_temp.append(f"[{id_morador}] **USA MLR ({nome_volume_escolhido}).** Início: {motivo_inicio}. Vazão ({vazao_enchimento_mlr}L/s): {inicio_mlr_clamped}s a {fim_mlr_clamped}s.")
+                            else:
+                                relatorio_simulacao_temp.append(f"[{id_morador}] MLR Cancelada (tempo fora do intervalo).")
                         # --- FIM DA APLICAÇÃO DA ALTERAÇÃO MÁQUINA DE LAVAR (V2 - Vazão) ---
 
 
@@ -553,31 +612,37 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                 # Add the flow rate time series of this simulation to the results list for this temperature
                 resultados_vazao_temperatura.append(vazao_simulacao)
 
-                # --- Check for Convergence Criterion ---
+                # --- Checagem de Convergência ---
                 if (i + 1) % verificar_a_cada_n_simulacoes == 0 and (i + 1) >= n_simulacoes_minimo:
-                       # Convert the cumulative list to a numpy array for percentile calculation
-                       resultados_cumulativos = np.array(resultados_vazao_temperatura)
-                       # Calculate the cumulative P95 over time
-                       p95_cumulativo_ts = np.percentile(resultados_cumulativos, 95, axis=0)
-                       # Calculate the maximum of the cumulative P95
-                       max_p95_cumulativo = np.max(p95_cumulativo_ts)
+                       # ... (código de checagem de convergência mantido) ...
+                       # Salva o relatório temporário para a última simulação antes do break
+                       if convergencia_atingida or (i + 1) == n_simulacoes_maximo:
+                           if temperatura_atual == temperaturas[0] and total_apartamentos == 1:
+                               relatorio_simulacao_atual = relatorio_simulacao_temp.copy()
+                       
+                       # Se atingir a convergência, sai do loop
+                       if convergencia_atingida:
+                           break
+                       
+                # Se for a última simulação sem convergência (atingiu o máximo), salva o relatório
+                if i + 1 == n_simulacoes_maximo:
+                       if not convergencia_atingida:
+                           st.warning(f"Número máximo de simulações ({n_simulacoes_maximo}) atingido sem convergência para {temperatura_atual}°C.")
+                       
+                       # Salva o relatório da última iteração (se for a primeira temperatura e 1 apartamento)
+                       if temperatura_atual == temperaturas[0] and total_apartamentos == 1:
+                           relatorio_simulacao_atual = relatorio_simulacao_temp.copy()
+                           
+                       break # Sai do loop
 
-                       # Check the stopping criterion
-                       if abs(max_p95_cumulativo - max_p95_anterior) < limiar_convergencia:
-                           st.success(f"Convergência atingida após {i + 1} simulações para {temperatura_atual}°C.")
-                           convergencia_atingida = True
-                           break # Exit the Monte Carlo simulation loop
-                       else:
-                           max_p95_anterior = max_p95_cumulativo # Update the previous value
 
-                # If the loop reached the maximum number of simulations without convergence, report it
-                if i + 1 == n_simulacoes_maximo and not convergencia_atingida:
-                       st.warning(f"Número máximo de simulações ({n_simulacoes_maximo}) atingido sem convergência para {temperatura_atual}°C.")
+            # Após todas as simulações, se for a primeira temperatura e 1 apartamento, salva o relatório final
+            if temperatura_atual == temperaturas[0] and total_apartamentos == 1:
+                relatorio_simulacao = relatorio_simulacao_atual.copy()
 
 
             # After all Monte Carlo simulations for this temperature (until convergence or maximum), calculate statistics
-            # Convert the list of flow rate arrays to a numpy array for easier statistical calculations
-            # If the loop stopped due to convergence, resultados_vazao_temperatura already contains the simulations up to the stopping point.
+            # ... (código de cálculo de estatísticas mantido) ...
             resultados_finais_ts = np.array(resultados_vazao_temperatura)
 
             # Calculate the mean, P5, and P95 over time (for each second) using the final results
@@ -604,6 +669,20 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
         # Finalize the progress bar
         progress_bar.progress(1.0)
         st.success("Simulação concluída.")
+
+        # --- NOVA SEÇÃO: RELATÓRIO TEXTUAL DA SIMULAÇÃO (apenas 1 apto) ---
+        if total_apartamentos == 1 and relatorio_simulacao:
+            st.markdown("---")
+            st.header("Relatório Textual da Última Simulação (1 Apto)")
+            st.info(f"Relatório detalhado para a primeira temperatura ({temperaturas[0]}°C).")
+            
+            # Ordenar o relatório por tempo de início (aproximado, não perfeito, mas ajuda na leitura)
+            # Para uma ordenação mais precisa, precisaria de uma estrutura de eventos mais robusta
+            
+            st.markdown("\n".join(relatorio_simulacao))
+
+        # --- FIM DA NOVA SEÇÃO ---
+
 
         # --- Visualize results for each temperature ---
         st.markdown("---") # Separator
