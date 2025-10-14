@@ -263,11 +263,12 @@ morador_3_rules = [
     ctrl.Rule(temperatura_do_ar['Hot'] & inicio_do_banho['On time'], duracao_do_banho['Long']),
     ctrl.Rule(temperatura_do_ar['Very hot'] & inicio_do_banho['On time'], duracao_do_banho['Long']),
 
+    # --- LINHA 268 ORIGINALMENTE COM ERRO: CORRIGIDA DE 'temperatura_ar' PARA 'temperatura_do_ar' ---
     ctrl.Rule(temperatura_do_ar['Very cold'] & inicio_do_banho['Delayed'], duracao_do_banho['No shower']),
     ctrl.Rule(temperatura_do_ar['Cold'] & inicio_do_banho['Delayed'], duracao_do_banho['No shower']),
-    ctrl.Rule(temperatura_ar['Pleasant'] & inicio_do_banho['Delayed'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_do_ar['Pleasant'] & inicio_do_banho['Delayed'], duracao_do_banho['No shower']),
     ctrl.Rule(temperatura_do_ar['Hot'] & inicio_do_banho['Delayed'], duracao_do_banho['Very fast']),
-    ctrl.Rule(temperatura_do_ar['Very hot'] & inicio_do_banho['Delayed'], duracao_do_banho['Fast']),
+    ctrl.Rule(temperatura_do_ar['Very hot'] & inicio_do_banho['Delayed'], duracao_do_banho['Very fast']),
 
     ctrl.Rule(temperatura_do_ar['Very cold'] & inicio_do_banho['Very delayed'], duracao_do_banho['No shower']),
     ctrl.Rule(temperatura_do_ar['Cold'] & inicio_do_banho['Very delayed'], duracao_do_banho['No shower']),
@@ -300,11 +301,11 @@ duracao_vaso = 60
 duracao_lavatorio = 30
 duracao_pia = 40
 
-# --- LÓGICA DO VASO: INÍCIO 90s ANTES DO BANHO (CORREÇÃO) ---
+# --- LÓGICA DO VASO: INÍCIO 90s ANTES DO BANHO (CORREÇÃO DE LÓGICA) ---
 # Se o vaso dura 60s e deve começar 90s antes do banho, o fim do vaso é 30s antes do banho.
 # O início do vaso é: inicio_banho - 90
 TEMPO_ANTES_DO_BANHO_PARA_INICIO_VASO = 90
-# --- FIM DA CORREÇÃO ---
+# --- FIM DA CORREÇÃO DE LÓGICA ---
 
 # --- INÍCIO DA ALTERAÇÃO MÁQUINA DE LAVAR (V2) ---
 # Vazão para enchimento da máquina de lavar (L/s) - Constante
@@ -417,12 +418,11 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                 banheiros_livres_em = np.zeros(total_banheiros_predio) # Stores the second when each bathroom will be free
 
                 
-                # --- NOVO PASSO: Sorteia o horário e preenche o campo para ordenação ---
-                # Isso deve ser feito ANTES da ordenação para garantir que a vazão do banho não mude
+                # --- Sorteia o horário e preenche o campo para ordenação ---
                 for m in moradores_predio:
                     m['inicio_banho_sorteado'] = random.randint(0, duracao_simulacao - 1)
                 
-                # --- NOVO PASSO: Ordenar os moradores pelo horário sorteado (SOLUÇÃO 1) ---
+                # --- Ordenar os moradores pelo horário sorteado (SOLUÇÃO 1) ---
                 moradores_predio_ordenado = sorted(moradores_predio, key=lambda m: m['inicio_banho_sorteado'])
 
 
@@ -494,7 +494,7 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
 
                         # Calculate bathroom occupation intervals for toilet, shower, and sink
                         # --- CORREÇÃO DO VASO (SOLUÇÃO 2) ---
-                        # Vaso começa 90s antes do banho. O banho é inicio_banho.
+                        # Vaso começa 90s antes do banho.
                         inicio_vaso = max(0, inicio_banho - TEMPO_ANTES_DO_BANHO_PARA_INICIO_VASO) 
                         fim_vaso = inicio_vaso + duracao_vaso
                         # --- FIM DA CORREÇÃO ---
@@ -502,6 +502,7 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                         inicio_lavatorio = inicio_banho + dur_banho_segundos + 30
                         fim_lavatorio = inicio_lavatorio + duracao_lavatorio
 
+                        # Ocupação começa na hora que o vaso inicia e termina quando o lavatório termina
                         intervalo_ocupacao_inicio = max(0, inicio_vaso)
                         intervalo_ocupacao_fim = min(duracao_simulacao, fim_lavatorio)
 
@@ -570,7 +571,8 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                                        
                         else:
                             # --- LOG: Banheiro Indisponível ---
-                            relatorio_simulacao_temp.append(f"[{id_morador}] **NÃO USA BANHEIRO.** (Indisponível em {intervalo_ocupacao_inicio}s. Banheiro livre em {banheiros_livres_em[primeiro_indice_banheiro_apt]:.0f}s).")
+                            # Detalhe extra no log para facilitar a depuração (mostra quando precisava e quando libera)
+                            relatorio_simulacao_temp.append(f"[{id_morador}] **NÃO USA BANHEIRO.** (Precisava em {intervalo_ocupacao_inicio}s. Livre em: {banheiros_livres_em[primeiro_indice_banheiro_apt]:.0f}s).")
                             
                             m['fim_pia_simulacao'] = 0
                             usa_mlr_na_simulacao = False
@@ -619,6 +621,7 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                 
                 # CORREÇÃO DE PERFORMANCE: Salva o relatório e dá o BREAK
                 if (convergencia_atingida or (i + 1) == n_simulacoes_maximo):
+                    # Só salva se for a primeira temperatura e 1 apartamento (para evitar logs enormes)
                     if temperatura_atual == temperaturas[0] and total_apartamentos == 1:
                         relatorio_simulacao_atual = relatorio_simulacao_temp.copy()
                 
