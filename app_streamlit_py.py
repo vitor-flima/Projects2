@@ -70,7 +70,7 @@ regras_default = {1: 1, 2: 2}
 # Loop para criar o seletor para cada morador
 for i in range(1, quantidade_moradores_por_apartamento + 1):
     # Regra padrão: Pai (1) para o 1º, Mãe (2) para o 2º, Filho (3) para os demais
-    default_value = regras_default.get(i, 3) 
+    default_value = regras_default.get(i, 3)
     
     regra_escolhida = st.sidebar.selectbox(
         f"Morador {i} (Regra padrão: {regras_map_nome.get(default_value)}):",
@@ -488,7 +488,7 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
 
 
                              else:
-                                relatorio_simulacao_temp.append(f"[{id_morador}] **SORTEADO P/ MLR, mas desiste.** (Horário de banho muito atrasado).")
+                                 relatorio_simulacao_temp.append(f"[{id_morador}] **SORTEADO P/ MLR, mas desiste.** (Horário de banho muito atrasado).")
                         # --- FIM DA LÓGICA MÁQUINA DE LAVAR (V2) ---
 
 
@@ -499,7 +499,7 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                         fim_vaso = inicio_vaso + duracao_vaso
                         # --- FIM DA CORREÇÃO ---
                         
-                        inicio_lavatorio = inicio_banho + dur_banho_segundos + 30
+                        inicio_lavatorio = fim_banho + 30 # 30 segundos após o banho
                         fim_lavatorio = inicio_lavatorio + duracao_lavatorio
 
                         # Ocupação começa na hora que o vaso inicia e termina quando o lavatório termina
@@ -507,80 +507,99 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                         intervalo_ocupacao_fim = min(duracao_simulacao, fim_lavatorio)
 
 
-                        # --- Check bathroom availability WITHIN THE RESIDENT'S APARTMENT ---
+                        # --- INÍCIO DA LÓGICA DE FILA DE ESPERA (ALTERAÇÃO PRINCIPAL) ---
                         apt_num = m['apartamento']
                         primeiro_indice_banheiro_apt = (apt_num - 1) * quantidade_banheiros_por_apartamento
-                        ultimo_indice_banheiro_apt = primeiro_indice_banheiro_apt + quantidade_banheiros_por_apartamento - 1 
+                        ultimo_indice_banheiro_apt = primeiro_indice_banheiro_apt + quantidade_banheiros_por_apartamento - 1
 
-                        banheiro_disponivel_indice_global = -1 
-                        banheiro_usado_idx_local = -1
+                        # 1. Encontrar o banheiro que ficará livre mais cedo dentro do apartamento
+                        # Isso garante que SEMPRE haverá um banheiro a ser usado (mesmo que com espera)
+                        banheiros_do_apt = banheiros_livres_em[primeiro_indice_banheiro_apt : ultimo_indice_banheiro_apt + 1]
+
+                        # Encontra o índice LOCAL do banheiro que estará livre mais cedo (ou agora)
+                        banheiro_usado_idx_local = np.argmin(banheiros_do_apt)
+                        # Converte para o índice GLOBAL
+                        banheiro_disponivel_indice_global = primeiro_indice_banheiro_apt + banheiro_usado_idx_local
+                        tempo_liberacao_banheiro = banheiros_livres_em[banheiro_disponivel_indice_global]
+
+
+                        # 2. Determinar o Início Real da Rotina (Espera ou Imediato)
+                        # O uso real só pode começar após o tempo de liberação do banheiro E não antes do tempo sorteado
+                        tempo_inicio_rotina_real = max(intervalo_ocupacao_inicio, tempo_liberacao_banheiro)
                         
-                        # Look for an available bathroom ONLY WITHIN THIS APARTMENT
-                        for idx_banheiro_global in range(primeiro_indice_banheiro_apt, ultimo_indice_banheiro_apt + 1):
-                            # Checagem: O banheiro está livre ANTES OU NO momento em que eu preciso dele?
-                            if idx_banheiro_global < len(banheiros_livres_em) and banheiros_livres_em[idx_banheiro_global] <= intervalo_ocupacao_inicio:
-                                banheiro_disponivel_indice_global = idx_banheiro_global
-                                banheiro_usado_idx_local = idx_banheiro_global - primeiro_indice_banheiro_apt + 1
-                                break 
-
-                        # If a bathroom is available in this apartment, "occupy" it and add flow rate
-                        if banheiro_disponivel_indice_global != -1:
-                            # Ocupa o banheiro até o fim do uso do lavatório
-                            banheiros_livres_em[banheiro_disponivel_indice_global] = intervalo_ocupacao_fim
+                        # 3. Se houve espera, recalcular todos os tempos
+                        if tempo_inicio_rotina_real > intervalo_ocupacao_inicio:
+                            tempo_espera = tempo_inicio_rotina_real - intervalo_ocupacao_inicio
                             
-                            # --- LOG: Banheiro (Vaso, Chuveiro, Lavatório) ---
-                            relatorio_simulacao_temp.append(f"[{id_morador}] **USA BANHEIRO {banheiro_usado_idx_local}** (Livre em: {intervalo_ocupacao_fim}s):")
+                            # Atualiza a variável base do banho para o novo início
+                            inicio_banho = tempo_inicio_rotina_real
+                            
+                            # Recalcula as dependências com o novo início do banho
+                            inicio_vaso = max(0, inicio_banho - TEMPO_ANTES_DO_BANHO_PARA_INICIO_VASO) 
+                            fim_vaso = inicio_vaso + duracao_vaso
+                            fim_banho = inicio_banho + dur_banho_segundos
+                            inicio_lavatorio = fim_banho + 30
+                            fim_lavatorio = inicio_lavatorio + duracao_lavatorio
+                            
+                            # Atualiza os intervalos de ocupação
+                            intervalo_ocupacao_inicio = inicio_vaso
+                            intervalo_ocupacao_fim = min(duracao_simulacao, fim_lavatorio)
+                            
+                            relatorio_simulacao_temp.append(f"[{id_morador}] **AGUARDA {tempo_espera:.0f}s** (Banheiro {banheiro_usado_idx_local + 1} livre em {tempo_liberacao_banheiro:.0f}s). Novo Início: {tempo_inicio_rotina_real:.0f}s.")
+                        else:
+                            # Não houve espera, usa no tempo sorteado
+                            relatorio_simulacao_temp.append(f"[{id_morador}] **USA BANHEIRO {banheiro_usado_idx_local + 1}** (Livre em: {intervalo_ocupacao_fim:.0f}s).")
 
-                            # Vaso
-                            inicio_vaso_clamped = max(0, inicio_vaso)
-                            fim_vaso_clamped = min(duracao_simulacao, fim_vaso)
-                            if fim_vaso_clamped > inicio_vaso_clamped:
-                                vazao_simulacao[inicio_vaso_clamped:fim_vaso_clamped] += vaso
-                                relatorio_simulacao_temp.append(f"  - Vaso ({vaso}L/s): {inicio_vaso_clamped}s a {fim_vaso_clamped}s. Fim Vaso: {fim_vaso_clamped}s.")
-
-                            # Chuveiro
-                            inicio_banho_clamped = max(0, inicio_banho)
-                            fim_banho_clamped = min(duracao_simulacao, inicio_banho + dur_banho_segundos)
-                            if fim_banho_clamped > inicio_banho_clamped:
-                                vazao_simulacao[inicio_banho_clamped : fim_banho_clamped] += chuveiro
-                                relatorio_simulacao_temp.append(f"  - Chuveiro ({chuveiro}L/s): {inicio_banho_clamped}s a {fim_banho_clamped}s.")
-
-                            # Lavatório
-                            inicio_lavatorio_clamped = max(0, inicio_lavatorio)
-                            fim_lavatorio_clamped = min(duracao_simulacao, fim_lavatorio)
-                            if fim_lavatorio_clamped > inicio_lavatorio_clamped:
-                                vazao_simulacao[inicio_lavatorio_clamped:fim_lavatorio_clamped] += lavatorio
-                                relatorio_simulacao_temp.append(f"  - Lavatório ({lavatorio}L/s): {inicio_lavatorio_clamped}s a {fim_lavatorio_clamped}s.")
+                        # 4. Ocupa o banheiro com o novo tempo de liberação
+                        # (O tempo final de ocupação é o mesmo, mas o início pode ter sido atrasado)
+                        banheiros_livres_em[banheiro_disponivel_indice_global] = intervalo_ocupacao_fim
+                        # --- FIM DA LÓGICA DE FILA DE ESPERA ---
 
 
-                            # Pia de Cozinha
-                            if m['usa_pia']:
-                                   inicio_pia = fim_banho + 120 # 120s após o banho (Regra original)
-                                   fim_pia = inicio_pia + duracao_pia
-                                   inicio_pia_clamped = max(0, inicio_pia)
-                                   fim_pia_clamped = min(duracao_simulacao, fim_pia)
-                                   if fim_pia_clamped > inicio_pia_clamped:
-                                       vazao_simulacao[inicio_pia_clamped:fim_pia_clamped] += pia
-                                       m['fim_pia_simulacao'] = fim_pia_clamped
-                                       relatorio_simulacao_temp.append(f"  - Pia Cozinha ({pia}L/s): {inicio_pia_clamped}s a {fim_pia_clamped}s.")
-                                   else:
-                                        m['fim_pia_simulacao'] = 0 
-                                        relatorio_simulacao_temp.append(f"  - Pia Cozinha: Não usada (tempo fora do intervalo).")
+                        # --- LÓGICA DE VAZÃO (usa as variáveis que podem ter sido ajustadas) ---
+
+                        # Vaso
+                        inicio_vaso_clamped = max(0, inicio_vaso)
+                        fim_vaso_clamped = min(duracao_simulacao, fim_vaso)
+                        if fim_vaso_clamped > inicio_vaso_clamped:
+                            vazao_simulacao[inicio_vaso_clamped:fim_vaso_clamped] += vaso
+                            relatorio_simulacao_temp.append(f"  - Vaso ({vaso}L/s): {inicio_vaso_clamped}s a {fim_vaso_clamped}s. Fim Vaso: {fim_vaso_clamped}s.")
+
+                        # Chuveiro
+                        inicio_banho_clamped = max(0, inicio_banho)
+                        fim_banho_clamped = min(duracao_simulacao, inicio_banho + dur_banho_segundos)
+                        if fim_banho_clamped > inicio_banho_clamped:
+                            vazao_simulacao[inicio_banho_clamped : fim_banho_clamped] += chuveiro
+                            relatorio_simulacao_temp.append(f"  - Chuveiro ({chuveiro}L/s): {inicio_banho_clamped}s a {fim_banho_clamped}s.")
+
+                        # Lavatório
+                        inicio_lavatorio_clamped = max(0, inicio_lavatorio)
+                        fim_lavatorio_clamped = min(duracao_simulacao, fim_lavatorio)
+                        if fim_lavatorio_clamped > inicio_lavatorio_clamped:
+                            vazao_simulacao[inicio_lavatorio_clamped:fim_lavatorio_clamped] += lavatorio
+                            relatorio_simulacao_temp.append(f"  - Lavatório ({lavatorio}L/s): {inicio_lavatorio_clamped}s a {fim_lavatorio_clamped}s.")
+
+
+                        # Pia de Cozinha (O início da Pia também deve ser recalculado se o banho atrasou)
+                        if m['usa_pia']:
+                            inicio_pia = fim_banho + 120 # 120s após o NOVO fim do banho
+                            fim_pia = inicio_pia + duracao_pia
+                            inicio_pia_clamped = max(0, inicio_pia)
+                            fim_pia_clamped = min(duracao_simulacao, fim_pia)
+                            if fim_pia_clamped > inicio_pia_clamped:
+                                vazao_simulacao[inicio_pia_clamped:fim_pia_clamped] += pia
+                                m['fim_pia_simulacao'] = fim_pia_clamped
+                                relatorio_simulacao_temp.append(f"  - Pia Cozinha ({pia}L/s): {inicio_pia_clamped}s a {fim_pia_clamped}s.")
                             else:
                                 m['fim_pia_simulacao'] = 0 
-                                       
+                                relatorio_simulacao_temp.append(f"  - Pia Cozinha: Não usada (tempo fora do intervalo).")
                         else:
-                            # --- LOG: Banheiro Indisponível ---
-                            # Detalhe extra no log para facilitar a depuração (mostra quando precisava e quando libera)
-                            relatorio_simulacao_temp.append(f"[{id_morador}] **NÃO USA BANHEIRO.** (Precisava em {intervalo_ocupacao_inicio}s. Livre em: {banheiros_livres_em[primeiro_indice_banheiro_apt]:.0f}s).")
-                            
-                            m['fim_pia_simulacao'] = 0
-                            usa_mlr_na_simulacao = False
-
-
+                            m['fim_pia_simulacao'] = 0 
+                                
+                                
                         # --- MLR (Ajuste Final e Vazão) ---
                         if usa_mlr_na_simulacao:
-                            # Refaz o cálculo do início da MLR com o valor final de fim_pia_simulacao
+                            # Recalcula o início da MLR com base no NOVO fim_banho/fim_pia
                             if m['usa_pia'] and m['fim_pia_simulacao'] > 0:
                                 inicio_mlr = m['fim_pia_simulacao'] + 30 
                                 motivo_inicio = "30s após Pia"
@@ -598,10 +617,10 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                                 relatorio_simulacao_temp.append(f"[{id_morador}] **USA MLR ({nome_volume_escolhido}).** Início: {motivo_inicio}. Vazão ({vazao_enchimento_mlr}L/s): {inicio_mlr_clamped}s a {fim_mlr_clamped}s.")
                             else:
                                 relatorio_simulacao_temp.append(f"[{id_morador}] MLR Cancelada (tempo fora do intervalo).")
-                        
+                            
 
                     except ValueError as e:
-                           st.warning(f"Erro na computação fuzzy para morador {m['nome']} do apto {m['apartamento']} na temperatura {temperatura_atual}°C: {e}")
+                            st.warning(f"Erro na computação fuzzy para morador {m['nome']} do apto {m['apartamento']} na temperatura {temperatura_atual}°C: {e}")
 
 
                 # Add the flow rate time series of this simulation to the results list for this temperature
@@ -625,12 +644,12 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                     if temperatura_atual == temperaturas[0] and total_apartamentos == 1:
                         relatorio_simulacao_atual = relatorio_simulacao_temp.copy()
                 
-                if convergencia_atingida:
-                    break
+                    if convergencia_atingida:
+                        break
                 
-                if i + 1 == n_simulacoes_maximo and not convergencia_atingida:
-                    st.warning(f"Número máximo de simulações ({n_simulacoes_maximo}) atingido sem convergência para {temperatura_atual}°C.")
-                    break
+                    if i + 1 == n_simulacoes_maximo and not convergencia_atingida:
+                        st.warning(f"Número máximo de simulações ({n_simulacoes_maximo}) atingido sem convergência para {temperatura_atual}°C.")
+                        break
 
 
             # Após todas as simulações, se for a primeira temperatura e 1 apartamento, salva o relatório final
