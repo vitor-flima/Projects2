@@ -466,29 +466,29 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
 
                         # Check if the resident is selected to use the machine in this apartment
                         if m['usa_mlr']:
-                             # Check the fuzzy membership for 'On time' or anterior (Early, Very early)
-                             pertinencia_delayed = fuzz.interp_membership(inicio_do_banho.universe, inicio_do_banho['Delayed'].mf, clipped_inicio_banho)
-                             pertinencia_very_delayed = fuzz.interp_membership(inicio_do_banho.universe, inicio_do_banho['Very delayed'].mf, clipped_inicio_banho)
-                             
-                             # Rule: Use the machine if the shower start is NOT primarily Delayed or Very Delayed
-                             if pertinencia_delayed + pertinencia_very_delayed < 0.5:
-                                 usa_mlr_na_simulacao = True
-                                 
-                                 # 1. Escolher o modelo da máquina aleatoriamente
-                                 nome_volume_escolhido, volume_escolhido = random.choice(list(volumes_maquina_lavar.items()))
-                                 
-                                 # 2. Calcular o tempo de enchimento (duração da vazão)
-                                 duracao_enchimento_mlr = calcular_tempo_enchimento(volume_escolhido, vazao_enchimento_mlr)
-                                 
-                                 # --- LOG: Máquina de Lavar Escolhida ---
-                                 relatorio_simulacao_temp.append(f"[{id_morador}] **SORTEADO P/ MLR.** Volume: {nome_volume_escolhido} ({volume_escolhido}L). Duração enchimento: {duracao_enchimento_mlr:.0f}s.")
-                                 
-                                 # 3. Determinar o início condicional (depende do uso da pia)
-                                 inicio_mlr = fim_banho + 120 # 120s após o banho (Default - corrigido depois)
+                            # Check the fuzzy membership for 'On time' or anterior (Early, Very early)
+                            pertinencia_delayed = fuzz.interp_membership(inicio_do_banho.universe, inicio_do_banho['Delayed'].mf, clipped_inicio_banho)
+                            pertinencia_very_delayed = fuzz.interp_membership(inicio_do_banho.universe, inicio_do_banho['Very delayed'].mf, clipped_inicio_banho)
+                            
+                            # Rule: Use the machine if the shower start is NOT primarily Delayed or Very Delayed
+                            if pertinencia_delayed + pertinencia_very_delayed < 0.5:
+                                usa_mlr_na_simulacao = True
+                                
+                                # 1. Escolher o modelo da máquina aleatoriamente
+                                nome_volume_escolhido, volume_escolhido = random.choice(list(volumes_maquina_lavar.items()))
+                                
+                                # 2. Calcular o tempo de enchimento (duração da vazão)
+                                duracao_enchimento_mlr = calcular_tempo_enchimento(volume_escolhido, vazao_enchimento_mlr)
+                                
+                                # --- LOG: Máquina de Lavar Escolhida ---
+                                relatorio_simulacao_temp.append(f"[{id_morador}] **SORTEADO P/ MLR.** Volume: {nome_volume_escolhido} ({volume_escolhido}L). Duração enchimento: {duracao_enchimento_mlr:.0f}s.")
+                                
+                                # 3. Determinar o início condicional (depende do uso da pia)
+                                inicio_mlr = fim_banho + 120 # 120s após o banho (Default - corrigido depois)
 
 
-                             else:
-                                 relatorio_simulacao_temp.append(f"[{id_morador}] **SORTEADO P/ MLR, mas desiste.** (Horário de banho muito atrasado).")
+                            else:
+                                relatorio_simulacao_temp.append(f"[{id_morador}] **SORTEADO P/ MLR, mas desiste.** (Horário de banho muito atrasado).")
                         # --- FIM DA LÓGICA MÁQUINA DE LAVAR (V2) ---
 
 
@@ -618,6 +618,7 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                             else:
                                 relatorio_simulacao_temp.append(f"[{id_morador}] MLR Cancelada (tempo fora do intervalo).")
                             
+                        
 
                     except ValueError as e:
                             st.warning(f"Erro na computação fuzzy para morador {m['nome']} do apto {m['apartamento']} na temperatura {temperatura_atual}°C: {e}")
@@ -673,8 +674,8 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
             # Store the statistical results and time series for this temperature
             resultados_por_temperatura[temperatura_atual] = {
                 'media_ts': media_vazao_ts, # Mean time series
-                'p5_ts': p5_vazao_ts,        # P5 time series
-                'p95_ts': p95_vazao_ts,      # P95 time series
+                'p5_ts': p5_vazao_ts,       # P5 time series
+                'p95_ts': p95_vazao_ts,     # P95 time series
                 'max_media': max_media_vazao, # Maximum mean over time
                 'max_p95': max_p95_vazao,    # Maximum P95 over time
                 'tempo': np.arange(duracao_simulacao) # The time x-axis
@@ -688,10 +689,37 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
         # --- NOVA SEÇÃO: RELATÓRIO TEXTUAL DA SIMULAÇÃO (apenas 1 apto) ---
         if total_apartamentos == 1 and relatorio_simulacao:
             st.markdown("---")
-            st.header("Relatório Textual da Última Simulação (1 Apto)")
-            st.info(f"Relatório detalhado para a primeira temperatura ({temperaturas[0]}°C).")
+            st.header("Relatório Textual Detalhado da 1ª Simulação (1 Apto) 📄")
+            st.info(f"Relatório detalhado para a primeira temperatura ({temperaturas[0]}°C) e uma única simulação Monte Carlo.")
             
-            st.markdown("\n".join(relatorio_simulacao))
+            # ----------------------------------------------------------------------
+            # INÍCIO DA ALTERAÇÃO DE FORMATAÇÃO (Não afeta a funcionalidade)
+            # ----------------------------------------------------------------------
+            formatted_report = []
+            
+            for line in relatorio_simulacao:
+                if line.startswith('['):
+                    # Nova seção de morador (linha de início principal)
+                    if len(formatted_report) > 0:
+                        formatted_report.append("\n---\n") # Adiciona separador entre moradores
+                    
+                    # Divide a linha principal para formatar o título e os detalhes
+                    parts = line.split(' - ')
+                    title_part = parts[0].replace('[', '### ').replace(']', '')
+                    detail_part = parts[1] if len(parts) > 1 else ""
+                    
+                    formatted_report.append(f"{title_part} 🚿🛀") # Título para o morador
+                    formatted_report.append(f"**Detalhes da Rotina:** {detail_part}\n") # Detalhe do Fuzzy
+                elif line.startswith('  - '):
+                    # Eventos de Vazão de Banheiro/Cozinha (começam com '  - ')
+                    formatted_report.append(f"- **Vazão Ativa:** {line.strip()[4:]}")
+                else:
+                    # Linhas de Espera, Uso de MLR (começam com o nome do morador em [ ])
+                    # Substitui a tag [Morador] por um destaque e formata como lista de eventos
+                    clean_line = line.replace('[', '**').replace(']', '**: ')
+                    formatted_report.append(f"* {clean_line.strip()}")
+
+            st.markdown("\n".join(formatted_report))
 
         # --- FIM DA NOVA SEÇÃO ---
 
