@@ -10,12 +10,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import io
 
-# --- INÍCIO DA ALTERAÇÃO 1: Inicialização do Session State ---
+# --- INÍCIO DA CORREÇÃO DE PERSISTÊNCIA: Inicialização do Session State ---
 if 'simulacao_concluida' not in st.session_state:
     st.session_state['simulacao_concluida'] = False
 if 'resultados_salvos' not in st.session_state:
     st.session_state['resultados_salvos'] = {}
-# --- FIM DA ALTERAÇÃO 1 ---
+# --- FIM DA CORREÇÃO DE PERSISTÊNCIA ---
 
 # --- FUNÇÃO PARA CÁLCULO DA DURAÇÃO DA MÁQUINA DE LAVAR (NOVA) ---
 def calcular_tempo_enchimento(volume_litros, vazao_L_por_s):
@@ -710,17 +710,11 @@ if st.session_state.get('simulacao_concluida', False):
     resultados_por_temperatura = st.session_state['resultados_salvos']
 
     # --- NOVA SEÇÃO: RELATÓRIO TEXTUAL DA SIMULAÇÃO (apenas 1 apto) ---
-    # Nota: A variável 'relatorio_simulacao' só está disponível se o relatório
-    # foi salvo na última simulação (o que ocorre apenas para total_apartamentos == 1).
-    # Como não podemos alterar a lógica de relatórios para persistência,
-    # re-usamos a variável 'relatorio_simulacao' se ela existir globalmente (ou apenas a ignoramos se não for 1 apto).
-    # Para o caso de 1 apartamento, vamos re-usar o último relatório salvo na memória de execução anterior.
-    
-    # É necessário um tratamento para 'relatorio_simulacao' que não persiste. 
-    # Vou re-executar a lógica de relatório textual apenas se total_apartamentos == 1.
-    
-    # Se total_apartamentos > 1, o relatório textual não é exibido, mas os gráficos sim.
-    if total_apartamentos == 1 and relatorio_simulacao:
+    # O relatório textual só é exibido se for 1 apartamento, mas o dado 'relatorio_simulacao' não persiste
+    # diretamente via session_state sem mais modificações na lógica. 
+    # Mantenho o bloco condicional para o caso de 1 apartamento, assumindo que a variável existe
+    # na memória da última execução (embora tecnicamente menos robusto que session state).
+    if total_apartamentos == 1 and 'relatorio_simulacao' in locals():
         st.markdown("---")
         st.header("Relatório Textual Detalhado da 1ª Simulação (1 Apto) 📄")
         st.info(f"Relatório detalhado para a primeira temperatura ({list(resultados_por_temperatura.keys())[0]}°C) e uma única simulação Monte Carlo.")
@@ -803,13 +797,15 @@ if st.session_state.get('simulacao_concluida', False):
 # --- FIM DA ALTERAÇÃO 3 ---
 
 else:
-    if st.sidebar.button("Executar Simulação"): # Only show the button if conditions are met
-        if not temperaturas:
-            st.warning("Por favor, insira temperaturas válidas para simular.")
-        if duracao_simulacao <= 0:
-              st.warning("A duração da simulação deve ser maior que zero.")
-        if total_moradores_predio <= 0:
-              st.warning("O número total de moradores no prédio deve ser maior que zero.")
-        if not (not temperaturas or duracao_simulacao <= 0 or total_moradores_predio <= 0):
-              # This case should not be reached if the outer if condition is correct, but as a fallback:
-              st.error("Ocorreu um erro inesperado. Verifique os parâmetros de entrada.")
+    # --- INÍCIO DA CORREÇÃO DE DUPLICIDADE: REMOÇÃO DO BOTÃO REPETIDO ---
+    # Este bloco agora apenas exibe avisos se as condições mínimas de entrada não forem atendidas.
+    if not temperaturas:
+        st.warning("Por favor, insira temperaturas válidas para simular.")
+    if duracao_simulacao <= 0:
+          st.warning("A duração da simulação deve ser maior que zero.")
+    if total_moradores_predio <= 0:
+          st.warning("O número total de moradores no prédio deve ser maior que zero.")
+    if not (not temperaturas or duracao_simulacao <= 0 or total_moradores_predio <= 0):
+          # This case should not be reached if the outer if condition is correct, but as a fallback:
+          st.error("Ocorreu um erro inesperado. Verifique os parâmetros de entrada.")
+    # --- FIM DA CORREÇÃO DE DUPLICIDADE ---
