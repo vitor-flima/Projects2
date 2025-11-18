@@ -559,22 +559,22 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                         # --- LÓGICA DE VAZÃO (usa as variáveis que podem ter sido ajustadas) ---
 
                         # Vaso
-                        inicio_vaso_clamped = max(0, inicio_vaso)
-                        fim_vaso_clamped = min(duracao_simulacao, fim_vaso)
+                        inicio_vaso_clamped = int(max(0, inicio_vaso)) # CORREÇÃO APLICADA: Converte para int
+                        fim_vaso_clamped = int(min(duracao_simulacao, fim_vaso)) # CORREÇÃO APLICADA: Converte para int
                         if fim_vaso_clamped > inicio_vaso_clamped:
                             vazao_simulacao[inicio_vaso_clamped:fim_vaso_clamped] += vaso
                             relatorio_simulacao_temp.append(f"  - Vaso ({vaso}L/s): {inicio_vaso_clamped}s a {fim_vaso_clamped}s. Fim Vaso: {fim_vaso_clamped}s.")
 
                         # Chuveiro
-                        inicio_banho_clamped = max(0, inicio_banho)
-                        fim_banho_clamped = min(duracao_simulacao, inicio_banho + dur_banho_segundos)
+                        inicio_banho_clamped = int(max(0, inicio_banho))
+                        fim_banho_clamped = int(min(duracao_simulacao, inicio_banho + dur_banho_segundos))
                         if fim_banho_clamped > inicio_banho_clamped:
                             vazao_simulacao[inicio_banho_clamped : fim_banho_clamped] += chuveiro
                             relatorio_simulacao_temp.append(f"  - Chuveiro ({chuveiro}L/s): {inicio_banho_clamped}s a {fim_banho_clamped}s.")
 
                         # Lavatório
-                        inicio_lavatorio_clamped = max(0, inicio_lavatorio)
-                        fim_lavatorio_clamped = min(duracao_simulacao, fim_lavatorio)
+                        inicio_lavatorio_clamped = int(max(0, inicio_lavatorio))
+                        fim_lavatorio_clamped = int(min(duracao_simulacao, fim_lavatorio))
                         if fim_lavatorio_clamped > inicio_lavatorio_clamped:
                             vazao_simulacao[inicio_lavatorio_clamped:fim_lavatorio_clamped] += lavatorio
                             relatorio_simulacao_temp.append(f"  - Lavatório ({lavatorio}L/s): {inicio_lavatorio_clamped}s a {fim_lavatorio_clamped}s.")
@@ -584,8 +584,8 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                         if m['usa_pia']:
                             inicio_pia = fim_banho + 120 # 120s após o NOVO fim do banho
                             fim_pia = inicio_pia + duracao_pia
-                            inicio_pia_clamped = max(0, inicio_pia)
-                            fim_pia_clamped = min(duracao_simulacao, fim_pia)
+                            inicio_pia_clamped = int(max(0, inicio_pia))
+                            fim_pia_clamped = int(min(duracao_simulacao, fim_pia))
                             if fim_pia_clamped > inicio_pia_clamped:
                                 vazao_simulacao[inicio_pia_clamped:fim_pia_clamped] += pia
                                 m['fim_pia_simulacao'] = fim_pia_clamped
@@ -608,8 +608,8 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                                 motivo_inicio = "120s após Banho"
                                 
                             # Re-Clampa os limites
-                            inicio_mlr_clamped = max(0, inicio_mlr)
-                            fim_mlr_clamped = min(duracao_simulacao, inicio_mlr + int(duracao_enchimento_mlr))
+                            inicio_mlr_clamped = int(max(0, inicio_mlr))
+                            fim_mlr_clamped = int(min(duracao_simulacao, inicio_mlr + int(duracao_enchimento_mlr)))
 
                             # Adiciona a vazão
                             if fim_mlr_clamped > inicio_mlr_clamped:
