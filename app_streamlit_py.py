@@ -10,13 +10,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import io
 
-# --- INÍCIO DA CORREÇÃO DE PERSISTÊNCIA: Inicialização do Session State ---
-if 'simulacao_concluida' not in st.session_state:
-    st.session_state['simulacao_concluida'] = False
-if 'resultados_salvos' not in st.session_state:
-    st.session_state['resultados_salvos'] = {}
-# --- FIM DA CORREÇÃO DE PERSISTÊNCIA ---
-
 # --- FUNÇÃO PARA CÁLCULO DA DURAÇÃO DA MÁQUINA DE LAVAR (NOVA) ---
 def calcular_tempo_enchimento(volume_litros, vazao_L_por_s):
     """Calcula o tempo (em segundos) necessário para encher a máquina."""
@@ -391,10 +384,6 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
         progress_bar = st.progress(0)
         total_temperaturas_simular = len(temperaturas)
         temp_counter = 0
-        
-        # Limpa os estados salvos ao iniciar uma nova simulação
-        st.session_state['resultados_salvos'] = {}
-        st.session_state['simulacao_concluida'] = False
 
         # Dictionary to store results (flow rate, statistics, etc.) for each temperature
         resultados_por_temperatura = {}
@@ -570,8 +559,8 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                         # --- LÓGICA DE VAZÃO (usa as variáveis que podem ter sido ajustadas) ---
 
                         # Vaso
-                        inicio_vaso_clamped = int(max(0, inicio_vaso))
-                        fim_vaso_clamped = int(min(duracao_simulacao, fim_vaso))
+                        inicio_vaso_clamped = int(max(0, inicio_vaso)) # CORREÇÃO APLICADA: Converte para int
+                        fim_vaso_clamped = int(min(duracao_simulacao, fim_vaso)) # CORREÇÃO APLICADA: Converte para int
                         if fim_vaso_clamped > inicio_vaso_clamped:
                             vazao_simulacao[inicio_vaso_clamped:fim_vaso_clamped] += vaso
                             relatorio_simulacao_temp.append(f"  - Vaso ({vaso}L/s): {inicio_vaso_clamped}s a {fim_vaso_clamped}s. Fim Vaso: {fim_vaso_clamped}s.")
@@ -696,116 +685,106 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
         # Finalize the progress bar
         progress_bar.progress(1.0)
         st.success("Simulação concluída.")
-        
-        # --- INÍCIO DA ALTERAÇÃO 2: Salva os resultados no Session State ---
-        st.session_state['resultados_salvos'] = resultados_por_temperatura
-        st.session_state['simulacao_concluida'] = True
-        # --- FIM DA ALTERAÇÃO 2 ---
+
+        # --- NOVA SEÇÃO: RELATÓRIO TEXTUAL DA SIMULAÇÃO (apenas 1 apto) ---
+        if total_apartamentos == 1 and relatorio_simulacao:
+            st.markdown("---")
+            st.header("Relatório Textual Detalhado da 1ª Simulação (1 Apto) 📄")
+            st.info(f"Relatório detalhado para a primeira temperatura ({temperaturas[0]}°C) e uma única simulação Monte Carlo.")
+            
+            # ----------------------------------------------------------------------
+            # INÍCIO DA ALTERAÇÃO DE FORMATAÇÃO (Não afeta a funcionalidade)
+            # ----------------------------------------------------------------------
+            formatted_report = []
+            
+            for line in relatorio_simulacao:
+                if line.startswith('['):
+                    # Nova seção de morador (linha de início principal)
+                    if len(formatted_report) > 0:
+                        formatted_report.append("\n---\n") # Adiciona separador entre moradores
+                    
+                    # Divide a linha principal para formatar o título e os detalhes
+                    parts = line.split(' - ')
+                    title_part = parts[0].replace('[', '### ').replace(']', '')
+                    detail_part = parts[1] if len(parts) > 1 else ""
+                    
+                    formatted_report.append(f"{title_part} 🚿🛀") # Título para o morador
+                    formatted_report.append(f"**Detalhes da Rotina:** {detail_part}\n") # Detalhe do Fuzzy
+                elif line.startswith('  - '):
+                    # Eventos de Vazão de Banheiro/Cozinha (começam com '  - ')
+                    formatted_report.append(f"- **Vazão Ativa:** {line.strip()[4:]}")
+                else:
+                    # Linhas de Espera, Uso de MLR (começam com o nome do morador em [ ])
+                    # Substitui a tag [Morador] por um destaque e formata como lista de eventos
+                    clean_line = line.replace('[', '**').replace(']', '**: ')
+                    formatted_report.append(f"* {clean_line.strip()}")
+
+            st.markdown("\n".join(formatted_report))
+
+        # --- FIM DA NOVA SEÇÃO ---
 
 
-# --- INÍCIO DA ALTERAÇÃO 3: Bloco de Visualização Executa após Simulação ---
-# Este bloco agora é executado se a flag 'simulacao_concluida' for True,
-# independente se o botão 'Executar Simulação' foi clicado nesta rodada.
-if st.session_state.get('simulacao_concluida', False):
-    resultados_por_temperatura = st.session_state['resultados_salvos']
+        # --- Visualize results for each temperature ---
+        st.markdown("---") # Separator
+        st.header("Resultados da Simulação")
 
-    # --- NOVA SEÇÃO: RELATÓRIO TEXTUAL DA SIMULAÇÃO (apenas 1 apto) ---
-    # O relatório textual só é exibido se for 1 apartamento, mas o dado 'relatorio_simulacao' não persiste
-    # diretamente via session_state sem mais modificações na lógica. 
-    # Mantenho o bloco condicional para o caso de 1 apartamento, assumindo que a variável existe
-    # na memória da última execução (embora tecnicamente menos robusto que session state).
-    if total_apartamentos == 1 and 'relatorio_simulacao' in locals():
-        st.markdown("---")
-        st.header("Relatório Textual Detalhado da 1ª Simulação (1 Apto) 📄")
-        st.info(f"Relatório detalhado para a primeira temperatura ({list(resultados_por_temperatura.keys())[0]}°C) e uma única simulação Monte Carlo.")
-        
-        # O código de formatação anterior para o relatório textual...
-        formatted_report = []
-        
-        for line in relatorio_simulacao:
-            if line.startswith('['):
-                if len(formatted_report) > 0:
-                    formatted_report.append("\n---\n") 
-                parts = line.split(' - ')
-                title_part = parts[0].replace('[', '### ').replace(']', '')
-                detail_part = parts[1] if len(parts) > 1 else ""
-                formatted_report.append(f"{title_part} 🚿🛀") 
-                formatted_report.append(f"**Detalhes da Rotina:** {detail_part}\n") 
-            elif line.startswith('  - '):
-                formatted_report.append(f"- **Vazão Ativa:** {line.strip()[4:]}")
-            else:
-                clean_line = line.replace('[', '**').replace(']', '**: ')
-                formatted_report.append(f"* {clean_line.strip()}")
+        for temperatura_atual, resultados in resultados_por_temperatura.items():
+            st.subheader(f"Temperatura: {temperatura_atual}°C")
+            fig, ax = plt.subplots(figsize=(12, 4))
+            ax.plot(resultados['tempo'], resultados['media_ts'], label='Média Vazão')
+            ax.plot(resultados['tempo'], resultados['p95_ts'], label='P95 Vazão', linestyle='--')
+            # ax.plot(resultados['tempo'], resultados['p5_ts'], label='P5 Vazão', linestyle='--') # P5 usually not plotted for maximum flow rate
+            ax.fill_between(resultados['tempo'], resultados['p5_ts'], resultados['p95_ts'], color='gray', alpha=0.2, label='Faixa P5–P95')
 
-        st.markdown("\n".join(formatted_report))
+            ax.set_xlabel('Tempo (s)')
+            ax.set_ylabel('Vazão (L/s)')
+            ax.legend()
+            ax.set_title(f'Série Temporal de Vazão - Temperatura: {temperatura_atual}°C')
+            ax.grid(True)
 
-    # --- FIM DA NOVA SEÇÃO ---
+            # Add max mean and max P95 as text on the plot
+            max_media_text = f"Máx Média: {resultados['max_media']:.2f} L/s"
+            max_p95_text = f"Máx P95: {resultados['max_p95']:.2f} L/s"
+            ax.text(0.01, 0.99, max_media_text, transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(boxstyle='round,pad=0.5', fc='wheat', alpha=0.5))
+            ax.text(0.01, 0.92, max_p95_text, transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(boxstyle='round,pad=0.5', fc='wheat', alpha=0.5))
 
+            plt.tight_layout()
 
-    # --- Visualize results for each temperature ---
-    st.markdown("---") # Separator
-    st.header("Resultados da Simulação")
+            # Save the figure to a BytesIO object
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png")
+            buf.seek(0)
 
-    for temperatura_atual, resultados in resultados_por_temperatura.items():
-        st.subheader(f"Temperatura: {temperatura_atual}°C")
-        fig, ax = plt.subplots(figsize=(12, 4))
-        ax.plot(resultados['tempo'], resultados['media_ts'], label='Média Vazão')
-        ax.plot(resultados['tempo'], resultados['p95_ts'], label='P95 Vazão', linestyle='--')
-        # ax.plot(resultados['tempo'], resultados['p5_ts'], label='P5 Vazão', linestyle='--') # P5 usually not plotted for maximum flow rate
-        ax.fill_between(resultados['tempo'], resultados['p5_ts'], resultados['p95_ts'], color='gray', alpha=0.2, label='Faixa P5–P95')
+            st.image(buf, caption=f"Série Temporal de Vazão - Temperatura: {temperatura_atual}°C")
+            plt.close(fig) # Close the figure to free up memory
 
-        ax.set_xlabel('Tempo (s)')
-        ax.set_ylabel('Vazão (L/s)')
-        ax.legend()
-        ax.set_title(f'Série Temporal de Vazão - Temperatura: {temperatura_atual}°C')
-        ax.grid(True)
+            # Display general statistics for this temperature using st.metric or a table
+            st.write("Estatísticas Gerais:")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric(label="Máximo da Vazão Média", value=f"{resultados['max_media']:.2f} L/s")
+            with col2:
+                st.metric(label="Máximo da Vazão P95", value=f"{resultados['max_p95']:.2f} L/s")
 
-        # Add max mean and max P95 as text on the plot
-        max_media_text = f"Máx Média: {resultados['max_media']:.2f} L/s"
-        max_p95_text = f"Máx P95: {resultados['max_p95']:.2f} L/s"
-        ax.text(0.01, 0.99, max_media_text, transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(boxstyle='round,pad=0.5', fc='wheat', alpha=0.5))
-        ax.text(0.01, 0.92, max_p95_text, transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(boxstyle='round,pad=0.5', fc='wheat', alpha=0.5))
-
-        plt.tight_layout()
-
-        # Save the figure to a BytesIO object
-        buf = io.BytesIO()
-        fig.savefig(buf, format="png")
-        buf.seek(0)
-
-        st.image(buf, caption=f"Série Temporal de Vazão - Temperatura: {temperatura_atual}°C")
-        plt.close(fig) # Close the figure to free up memory
-
-        # Display general statistics for this temperature using st.metric or a table
-        st.write("Estatísticas Gerais:")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric(label="Máximo da Vazão Média", value=f"{resultados['max_media']:.2f} L/s")
-        with col2:
-            st.metric(label="Máximo da Vazão P95", value=f"{resultados['max_p95']:.2f} L/s")
-
-        # Add download button for the image
-        st.download_button(
-            label=f"Download Gráfico ({temperatura_atual}°C)",
-            data=buf,
-            file_name=f"grafico_vazao_temp_{temperatura_atual}C.png",
-            mime="image/png"
-        )
+            # Add download button for the image
+            st.download_button(
+                label=f"Download Gráfico ({temperatura_atual}°C)",
+                data=buf,
+                file_name=f"grafico_vazao_temp_{temperatura_atual}C.png",
+                mime="image/png"
+            )
 
 
-        st.markdown("---") # Separator between temperatures
-# --- FIM DA ALTERAÇÃO 3 ---
+            st.markdown("---") # Separator between temperatures
 
 else:
-    # --- INÍCIO DA CORREÇÃO DE DUPLICIDADE: REMOÇÃO DO BOTÃO REPETIDO ---
-    # Este bloco agora apenas exibe avisos se as condições mínimas de entrada não forem atendidas.
-    if not temperaturas:
-        st.warning("Por favor, insira temperaturas válidas para simular.")
-    if duracao_simulacao <= 0:
-          st.warning("A duração da simulação deve ser maior que zero.")
-    if total_moradores_predio <= 0:
-          st.warning("O número total de moradores no prédio deve ser maior que zero.")
-    if not (not temperaturas or duracao_simulacao <= 0 or total_moradores_predio <= 0):
-          # This case should not be reached if the outer if condition is correct, but as a fallback:
-          st.error("Ocorreu um erro inesperado. Verifique os parâmetros de entrada.")
-    # --- FIM DA CORREÇÃO DE DUPLICIDADE ---
+    if st.sidebar.button("Executar Simulação"): # Only show the button if conditions are met
+        if not temperaturas:
+            st.warning("Por favor, insira temperaturas válidas para simular.")
+        if duracao_simulacao <= 0:
+              st.warning("A duração da simulação deve ser maior que zero.")
+        if total_moradores_predio <= 0:
+              st.warning("O número total de moradores no prédio deve ser maior que zero.")
+        if not (not temperaturas or duracao_simulacao <= 0 or total_moradores_predio <= 0):
+              # This case should not be reached if the outer if condition is correct, but as a fallback:
+              st.error("Ocorreu um erro inesperado. Verifique os parâmetros de entrada.")
