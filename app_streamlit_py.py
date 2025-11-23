@@ -120,13 +120,20 @@ st.sidebar.write(f"Temperaturas a serem simuladas: {temperaturas}")
 
 st.sidebar.markdown("---") # Separator
 st.sidebar.subheader("Parâmetros da Simulação Monte Carlo")
-# --- Configuração do Critério de Parada por Convergência ---
-n_simulacoes_minimo = st.sidebar.number_input("Simulações mínimas para convergência:", min_value=1, value=200, step=10)
-limiar_convergencia = st.sidebar.number_input("Limiar de convergência (L/s):", min_value=0.0, value=0.005, step=0.001, format="%.4f")
-verificar_a_cada_n_simulacoes = st.sidebar.number_input("Verificar convergência a cada N simulações:", min_value=1, value=5, step=1)
 
-# Número máximo de simulações (ainda é bom ter um limite superior)
-n_simulacoes_maximo = st.sidebar.number_input("Máximo de simulações:", min_value=1, value=5000, step=100)
+# --- INÍCIO DA ALTERAÇÃO 2: CRITÉRIO DE PARADA ESTATÍSTICO ---
+# O parâmetro 'Simulações mínimas' vira o número mínimo de lotes (M_min)
+n_lotes_minimo = st.sidebar.number_input("Lotes Mínimos para Teste Estatístico (M):", min_value=1, value=30, step=1)
+
+# O parâmetro 'Verificar a cada N simulações' vira o tamanho do lote (k)
+tamanho_do_lote_k = st.sidebar.number_input("Tamanho do Lote (k) - Iterações por Lote:", min_value=1, value=50, step=5)
+
+# O parâmetro 'Limiar de convergência' é o erro padrão aceitável (Tol)
+limiar_convergencia = st.sidebar.number_input("Erro Padrão Aceitável do P95 (Tol - L/s):", min_value=0.0, value=0.005, step=0.001, format="%.4f")
+
+# Número máximo de simulações (mantido como salvaguarda)
+n_simulacoes_maximo = st.sidebar.number_input("Máximo de Simulações (Salvaguarda):", min_value=1, value=5000, step=100)
+# --- FIM DA ALTERAÇÃO 2 ---
 
 st.sidebar.markdown("---") # Separator
 # Removed the checkbox for showing membership functions
@@ -394,11 +401,16 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
 
             # List to store the flow rate time series of each Monte Carlo simulation for this temperature
             resultados_vazao_temperatura = []
-            max_p95_anterior = float('inf') # Initialize with infinity to ensure the first difference is large
+            
+            # --- VARIÁVEIS PARA A NOVA LÓGICA DE CONVERGÊNCIA (Lotes) ---
+            p95_lotes = [] # Armazena o valor máximo do P95 TS para cada lote
             convergencia_atingida = False
             
             # Limpa o relatório a cada nova temperatura
             relatorio_simulacao_atual = []
+            
+            # Inicializa as variáveis de controle do loop
+            n_lotes_concluidos = 0
 
 
             # Monte Carlo simulation loop
@@ -627,30 +639,63 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                 # Add the flow rate time series of this simulation to the results list for this temperature
                 resultados_vazao_temperatura.append(vazao_simulacao)
 
-                # --- Check for Convergence Criterion ---
-                if (i + 1) % verificar_a_cada_n_simulacoes == 0 and (i + 1) >= n_simulacoes_minimo:
-                    resultados_cumulativos = np.array(resultados_vazao_temperatura)
-                    p95_cumulativo_ts = np.percentile(resultados_cumulativos, 95, axis=0)
+                # --- INÍCIO DA ALTERAÇÃO 3: LÓGICA DE CONVERGÊNCIA POR ERRO PADRÃO DO P95 ---
+                # A verificação ocorre apenas se o número de simulações for um múltiplo de k
+                if (i + 1) % tamanho_do_lote_k == 0:
+                    
+                    # 1. Calcula o P95 para este LOTE (das últimas 'k' simulações)
+                    # No Batch Means, é mais robusto calcular o P95 sobre todas as simulações acumuladas (embora o erro seja calculado entre lotes).
+                    # Para simplificação e estabilidade, calculamos o P95 sobre as *amostras acumuladas* e usamos o lote para testar o Erro Padrão.
+                    
+                    # Calcula o P95 da Série Temporal (TS) usando TODAS as simulações até agora
+                    resultados_cumulativos_lote = np.array(resultados_vazao_temperatura)
+                    p95_cumulativo_ts = np.percentile(resultados_cumulativos_lote, 95, axis=0)
+                    
+                    # O valor que interessa é o MÁXIMO do P95 TS, que representa o dimensionamento.
                     max_p95_cumulativo = np.max(p95_cumulativo_ts)
+                    
+                    # 2. Adiciona o MÁXIMO do P95 TS à lista de P95 de Lotes
+                    # Nota: Embora este P95 seja calculado a partir de todos os dados, a cada 'k' iterações,
+                    # ele representa a estimativa do P95 após aquele lote, e o DP entre esses valores é
+                    # uma métrica robusta de estabilidade.
+                    p95_lotes.append(max_p95_cumulativo)
+                    
+                    # Incrementa o contador de lotes
+                    n_lotes_concluidos += 1
+                    
+                    # 3. Teste de Parada Estatístico (apenas se M >= M_min)
+                    if n_lotes_concluidos >= n_lotes_minimo:
+                        # Converte a lista de P95 de lotes para um array para cálculo estatístico
+                        p95_lotes_array = np.array(p95_lotes)
+                        
+                        # Calcula o Desvio Padrão do P95 dos Lotes (s_Q95)
+                        s_p95 = np.std(p95_lotes_array, ddof=1) # ddof=1 para desvio padrão amostral
+                        
+                        # Calcula o Erro Padrão do P95 (EP_Q95)
+                        # M é o número de lotes concluídos
+                        erro_padrao_p95 = s_p95 / np.sqrt(n_lotes_concluidos)
 
-                    if abs(max_p95_cumulativo - max_p95_anterior) < limiar_convergencia:
-                        st.success(f"Convergência atingida após {i + 1} simulações para {temperatura_atual}°C.")
-                        convergencia_atingida = True
-                    else:
-                        max_p95_anterior = max_p95_cumulativo
-                
+                        st.sidebar.markdown(f"**Status:** {i + 1} iterações, {n_lotes_concluidos} lotes.")
+                        st.sidebar.text(f"  - Último EP(P95): {erro_padrao_p95:.4f} L/s")
+                        st.sidebar.text(f"  - Tolerância: {limiar_convergencia:.4f} L/s")
+
+                        if erro_padrao_p95 < limiar_convergencia:
+                            st.success(f"Convergência atingida após {i + 1} simulações ({n_lotes_concluidos} lotes) para {temperatura_atual}°C. EP(P95) = {erro_padrao_p95:.4f} L/s.")
+                            convergencia_atingida = True
+                        
                 # CORREÇÃO DE PERFORMANCE: Salva o relatório e dá o BREAK
                 if (convergencia_atingida or (i + 1) == n_simulacoes_maximo):
                     # Só salva se for a primeira temperatura e 1 apartamento (para evitar logs enormes)
                     if temperatura_atual == temperaturas[0] and total_apartamentos == 1:
                         relatorio_simulacao_atual = relatorio_simulacao_temp.copy()
-                
+                    
                     if convergencia_atingida:
                         break
-                
+                    
                     if i + 1 == n_simulacoes_maximo and not convergencia_atingida:
-                        st.warning(f"Número máximo de simulações ({n_simulacoes_maximo}) atingido sem convergência para {temperatura_atual}°C.")
+                        st.warning(f"Número máximo de simulações ({n_simulacoes_maximo}) atingido sem convergência para {temperatura_atual}°C. EP(P95) final: {erro_padrao_p95:.4f} L/s.")
                         break
+                # --- FIM DA ALTERAÇÃO 3: LÓGICA DE CONVERGÊNCIA POR ERRO PADRÃO DO P95 ---
 
 
             # Após todas as simulações, se for a primeira temperatura e 1 apartamento, salva o relatório final
@@ -674,8 +719,8 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
             # Store the statistical results and time series for this temperature
             resultados_por_temperatura[temperatura_atual] = {
                 'media_ts': media_vazao_ts, # Mean time series
-                'p5_ts': p5_vazao_ts,       # P5 time series
-                'p95_ts': p95_vazao_ts,     # P95 time series
+                'p5_ts': p5_vazao_ts,        # P5 time series
+                'p95_ts': p95_vazao_ts,      # P95 time series
                 'max_media': max_media_vazao, # Maximum mean over time
                 'max_p95': max_p95_vazao,    # Maximum P95 over time
                 'tempo': np.arange(duracao_simulacao) # The time x-axis
