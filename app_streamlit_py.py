@@ -22,9 +22,9 @@ st.title("Simulação de Vazão em Prédio Residencial")
 
 # Add a brief description or introduction
 st.write("""
-Este aplicativo realiza uma simulação de Monte Carlo para estimar a vazão de água em um prédio residencial,
-considerando o comportamento fuzzy dos moradores em relação ao uso do chuveiro e outros aparelhos sanitários,
-variando a temperatura ambiente.
+Este aplicativo realiza utiliza lógica fuzzy combinada com simulação de Monte Carlo para estimar a vazão de água, em L/s, na coluna de distribuição de um edifício residencial.
+Cada simulação considera que o trecho atende a quantidade de pavimentos e apartamentos por pavimento indicadas pelo usuário. O usuário deve fornecer as informações do edifício, moradores e as demais necessárias
+para o funcionamento do aplicativo. O autor não se responsabiliza pelo uso inadequado da ferramenta.
 """)
 
 # --- INÍCIO DA ALTERAÇÃO 3: ADIÇÃO DA TABELA DE REGRAS NA SEÇÃO CENTRAL ---
