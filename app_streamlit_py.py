@@ -71,10 +71,11 @@ regras_morador_3_display = {
 
 def criar_tabela_regra(titulo_regra, regras_data):
     """Gera o HTML para a tabela de regras detalhada."""
+    # Transforma o dicionário de regras em um DataFrame para facilitar o manuseio das linhas
     df_regras_display = pd.DataFrame(regras_data, index=conjuntos_inicio).T.reset_index()
-    df_regras_display.columns.name = None
-    df_regras_display.rename(columns={'index': 'Temperatura'}, inplace=True)
-
+    df_regras_display.columns = ['Temperatura'] + conjuntos_inicio # Garante os nomes corretos das colunas
+    
+    # Inicia a string HTML
     html_content = f"""
     <div style="margin-top: 30px; margin-bottom: 20px;">
     <h4>{titulo_regra}</h4>
@@ -96,24 +97,25 @@ def criar_tabela_regra(titulo_regra, regras_data):
         <tbody>
     """
     
-    for i, row in df_regras_display.iterrows():
-        html_content += f"""
-        <tr>
-            <td style="text-align:left; padding: 8px; font-weight:bold;">{row['Temperatura']}</td>
-            <td style="text-align:center; padding: 8px;">{row['Muito Cedo']}</td>
-            <td style="text-align:center; padding: 8px;">{row['Cedo']}</td>
-            <td style="text-align:center; padding: 8px;">{row['Na Hora']}</td>
-            <td style="text-align:center; padding: 8px;">{row['Atrasado']}</td>
-            <td style="text-align:center; padding: 8px;">{row['Muito Atrasado']}</td>
-        </tr>
-        """
+    # Adiciona as linhas da tabela
+    for index, row in df_regras_display.iterrows():
+        html_content += "<tr>"
+        html_content += f"<td style=\"text-align:left; padding: 8px; font-weight:bold;\">{row['Temperatura']}</td>"
+        
+        # Itera sobre os conjuntos de início para as células de dados
+        for inicio in conjuntos_inicio:
+            html_content += f"<td style=\"text-align:center; padding: 8px;\">{row[inicio]}</td>"
+            
+        html_content += "</tr>"
     
+    # Fecha o corpo e a tabela
     html_content += """
         </tbody>
     </table>
     </div>
     </div>
     """
+    # Retorna o HTML sem tags extras que possam causar erro de renderização
     return html_content
 
 st.markdown("---")
@@ -128,7 +130,7 @@ st.write(
         <thead>
             <tr>
                 <td rowspan="2" style="text-align:center; font-weight:bold; padding: 8px; background-color: #f8f8f8;">Regras</td>
-                <td colspan="5" style="text-align:center; font-weight:bold; padding: 8px; background-color: #f8f8f8;">Resumo</td>
+                <td colspan="3" style="text-align:center; font-weight:bold; padding: 8px; background-color: #f8f8f8;">Resumo</td>
             </tr>
             <tr>
                 <td style="text-align:center; font-weight:bold; padding: 8px; background-color: #f0f0f0;">1</td>
@@ -158,6 +160,7 @@ st.markdown("---")
 
 
 # Tabela 2: Regras da Opção 1 (Detalhe)
+# Título alterado para "Regras da Opção 1"
 st.markdown(criar_tabela_regra("Regras da Opção 1 (Morador 1: Ex: Pai)", regras_morador_1_display), unsafe_allow_html=True)
 
 # Tabela 3: Regras da Opção 2 (Detalhe)
@@ -512,17 +515,17 @@ for apt_num in range(1, total_apartamentos + 1):
             'fim_pia_simulacao': 0, # Variável para armazenar o fim da pia na simulação (necessário para a lógica da MLR)
             'inicio_banho_sorteado': 0 # NOVO: Armazena o tempo sorteado para ordenação
         })
-    moradores_no_apartamento.append(morador_num_no_apt)
     moradores_predio.extend(moradores_no_apartamento)
 
 # Randomly select one resident per apartment to use the sink and one for the washing machine
 # Group residents by apartment for easier selection
 moradores_por_apartamento_dict = {}
-for morador in moradores_predio:
-    if isinstance(morador, dict): # Ensure it's a resident dictionary, not the number appended above
-        if morador['apartamento'] not in moradores_por_apartamento_dict:
-            moradores_por_apartamento_dict[morador['apartamento']] = []
-        moradores_por_apartamento_dict[morador['apartamento']].append(morador)
+# Filtering out non-dict elements from moradores_predio which might have caused issues in the previous run
+moradores_temp_filtered = [m for m in moradores_predio if isinstance(m, dict)]
+for morador in moradores_temp_filtered:
+    if morador['apartamento'] not in moradores_por_apartamento_dict:
+        moradores_por_apartamento_dict[morador['apartamento']] = []
+    moradores_por_apartamento_dict[morador['apartamento']].append(morador)
 
 # Randomly select one resident to use the sink and one for the washing machine in each apartment
 for apt_num, lista_moradores_apt in moradores_por_apartamento_dict.items():
@@ -537,8 +540,8 @@ for apt_num, lista_moradores_apt in moradores_por_apartamento_dict.items():
         morador_usa_mlr['usa_mlr'] = True
 
 # The final list of residents for the simulation is 'moradores_predio'
-# Filter to only keep the resident dictionaries for simulation
-moradores_predio = [m for m in moradores_predio if isinstance(m, dict)]
+# Use the filtered list for the rest of the simulation logic
+moradores_predio = moradores_temp_filtered
 st.write(f"Lista criada com {len(moradores_predio)} moradores para todo o prédio.")
 
 
