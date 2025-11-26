@@ -136,15 +136,15 @@ st.write(
         <tbody>
             <tr>
                 <td style="text-align:left; padding: 8px; font-weight:bold;">1</td>
-                <td colspan="3" style="text-align:center; padding: 8px;">Mais sensível ao frio e pontual (Regra 1)</td>
+                <td colspan="3" style="text-align:center; padding: 8px;">Mais sensível ao frio e pontual </td>
             </tr>
             <tr>
                 <td style="text-align:left; padding: 8px; font-weight:bold;">2</td>
-                <td colspan="3" style="text-align:center; padding: 8px;">Uso mais longo em temperaturas altas (Regra 2)</td>
+                <td colspan="3" style="text-align:center; padding: 8px;">Uso mais longo em temperaturas altas </td>
             </tr>
             <tr>
                 <td style="text-align:left; padding: 8px; font-weight:bold;">3</td>
-                <td colspan="3" style="text-align:center; padding: 8px;">Mais tolerante a atrasos e não toma banho no frio (Regra 3)</td>
+                <td colspan="3" style="text-align:center; padding: 8px;">Mais tolerante a atrasos e não toma banho no frio </td>
             </tr>
         </tbody>
     </table>
@@ -156,13 +156,13 @@ st.markdown("---")
 
 # Tabela 2: Regras da Opção 1 (Detalhe)
 # Título alterado para "Regras da Opção 1"
-st.markdown(criar_tabela_regra("Regras da Opção 1 (Morador 1: Ex: Pai)", regras_morador_1_display), unsafe_allow_html=True)
+st.markdown(criar_tabela_regra("Regras da Opção 1 ", regras_morador_1_display), unsafe_allow_html=True)
 
 # Tabela 3: Regras da Opção 2 (Detalhe)
-st.markdown(criar_tabela_regra("Regras da Opção 2 (Morador 2: Ex: Mãe)", regras_morador_2_display), unsafe_allow_html=True)
+st.markdown(criar_tabela_regra("Regras da Opção 2 ", regras_morador_2_display), unsafe_allow_html=True)
 
 # Tabela 4: Regras da Opção 3 (Detalhe)
-st.markdown(criar_tabela_regra("Regras da Opção 3 (Morador 3+: Ex: Filho)", regras_morador_3_display), unsafe_allow_html=True)
+st.markdown(criar_tabela_regra("Regras da Opção 3 ", regras_morador_3_display), unsafe_allow_html=True)
 
 st.markdown("---")
 # --- FIM DA ALTERAÇÃO 3 ---
