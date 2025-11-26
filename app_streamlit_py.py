@@ -33,101 +33,139 @@ variando a temperatura ambiente.
 conjuntos_inicio = ["Muito Cedo", "Cedo", "Na Hora", "Atrasado", "Muito Atrasado"]
 conjuntos_temp = ["Muito Frio", "Frio", "Agradável", "Quente", "Muito Quente"]
 
-# Conjuntos de Saída (Duração do Banho)
-conjuntos_duracao = ["Sem Banho", "Muito Rápido", "Rápido", "Normal", "Longo"]
-
-# Reorganiza os dados das regras para exibição (apenas o Morador 1, como exemplo base)
-# O código REAL de regras (morador_1_rules, etc.) NÃO foi alterado.
-data = {
-    "Muito Frio": ["Muito Rápido", "Muito Rápido", "Muito Rápido", "Sem Banho", "Sem Banho"],
-    "Frio": ["Rápido", "Rápido", "Rápido", "Sem Banho", "Sem Banho"],
-    "Agradável": ["Normal", "Normal", "Rápido", "Sem Banho", "Sem Banho"],
-    "Quente": ["Normal", "Normal", "Normal", "Muito Rápido", "Sem Banho"],
-    "Muito Quente": ["Longo", "Longo", "Normal", "Muito Rápido", "Sem Banho"]
+# Conjuntos de Saída (Duração do Banho) - Correspondente aos conjuntos Fuzzy (em minutos)
+# No código original: 'No shower', 'Very fast', 'Fast', 'Normal', 'Long'
+mapa_duracao = {
+    'No shower': 'Sem Banho',
+    'Very fast': 'Muito Rápido',
+    'Fast': 'Rápido',
+    'Normal': 'Normal',
+    'Long': 'Longo'
 }
 
-# Criando o DataFrame para a tabela de exibição
-df_regras_display = pd.DataFrame(data, index=conjuntos_inicio)
-df_regras_display = df_regras_display.T # Transpor para 'Temperatura' na linha
+# Definição das Regras em Português para cada Morador (Visualização)
+# As regras são extraídas da lógica do código original, mas MANTIDAS AQUI APENAS PARA EXIBIÇÃO
+regras_morador_1_display = {
+    "Muito Frio": [mapa_duracao['Very fast'], mapa_duracao['Very fast'], mapa_duracao['Very fast'], mapa_duracao['No shower'], mapa_duracao['No shower']],
+    "Frio":       [mapa_duracao['Fast'],      mapa_duracao['Fast'],      mapa_duracao['Fast'],      mapa_duracao['No shower'], mapa_duracao['No shower']],
+    "Agradável":  [mapa_duracao['Normal'],    mapa_duracao['Normal'],    mapa_duracao['Fast'],      mapa_duracao['No shower'], mapa_duracao['No shower']],
+    "Quente":     [mapa_duracao['Normal'],    mapa_duracao['Normal'],    mapa_duracao['Normal'],    mapa_duracao['Very fast'], mapa_duracao['No shower']],
+    "Muito Quente": [mapa_duracao['Long'],      mapa_duracao['Long'],      mapa_duracao['Normal'],    mapa_duracao['Very fast'], mapa_duracao['No shower']]
+}
 
-# Ajuste da primeira coluna/index e renomeação das colunas para mesclagem visual
-df_regras_display.index.name = "Temperatura"
-df_regras_display = df_regras_display.reset_index()
+regras_morador_2_display = {
+    "Muito Frio": [mapa_duracao['Very fast'], mapa_duracao['Very fast'], mapa_duracao['Very fast'], mapa_duracao['No shower'], mapa_duracao['No shower']],
+    "Frio":       [mapa_duracao['Fast'],      mapa_duracao['Fast'],      mapa_duracao['Fast'],      mapa_duracao['No shower'], mapa_duracao['No shower']],
+    "Agradável":  [mapa_duracao['Fast'],      mapa_duracao['Fast'],      mapa_duracao['Fast'],      mapa_duracao['No shower'], mapa_duracao['No shower']], # DIFERENÇA EM AGRADAVEL / NA HORA
+    "Quente":     [mapa_duracao['Normal'],    mapa_duracao['Normal'],    mapa_duracao['Normal'],    mapa_duracao['Very fast'], mapa_duracao['No shower']],
+    "Muito Quente": [mapa_duracao['Normal'],    mapa_duracao['Long'],      mapa_duracao['Normal'],    mapa_duracao['Very fast'], mapa_duracao['No shower']] # DIFERENÇA EM MUITO QUENTE
+}
 
-st.markdown("---")
-st.subheader("Resumo das Regras Fuzzy de Duração do Banho")
+regras_morador_3_display = {
+    "Muito Frio": [mapa_duracao['No shower'], mapa_duracao['No shower'], mapa_duracao['No shower'], mapa_duracao['No shower'], mapa_duracao['No shower']], # DIFERENÇA EM TODAS AS FRIAS
+    "Frio":       [mapa_duracao['No shower'], mapa_duracao['No shower'], mapa_duracao['No shower'], mapa_duracao['No shower'], mapa_duracao['No shower']], # DIFERENÇA EM TODAS AS FRIAS
+    "Agradável":  [mapa_duracao['Fast'],      mapa_duracao['Normal'],    mapa_duracao['Normal'],    mapa_duracao['No shower'], mapa_duracao['No shower']], # DIFERENÇA EM AGRADAVEL
+    "Quente":     [mapa_duracao['Long'],      mapa_duracao['Normal'],    mapa_duracao['Long'],      mapa_duracao['Very fast'], mapa_duracao['No shower']], # DIFERENÇA EM QUENTE / NA HORA
+    "Muito Quente": [mapa_duracao['Long'],      mapa_duracao['Normal'],    mapa_duracao['Long'],      mapa_duracao['Very fast'], mapa_duracao['No shower']] # DIFERENÇA EM MUITO QUENTE
+}
 
-# Tabela ajustada para refletir o layout solicitado (célula 'Horário de Início' mesclada)
-st.write(
-    """
-    **Tabela de Regras (Duração do Banho em Minutos)**
+def criar_tabela_regra(titulo_regra, regras_data):
+    """Gera o HTML para a tabela de regras detalhada."""
+    df_regras_display = pd.DataFrame(regras_data, index=conjuntos_inicio).T.reset_index()
+    df_regras_display.columns.name = None
+    df_regras_display.rename(columns={'index': 'Temperatura'}, inplace=True)
+
+    html_content = f"""
+    <div style="margin-top: 30px; margin-bottom: 20px;">
+    <h4>{titulo_regra}</h4>
     <div style="overflow-x:auto;">
-    <table border="1" style="width:100%; border-collapse: collapse;">
+    <table border="1" style="width:100%; border-collapse: collapse; font-size: 14px;">
         <thead>
             <tr>
-                <td rowspan="2" style="text-align:center; font-weight:bold; padding: 8px;">Regras</td>
-                <td colspan="5" style="text-align:center; font-weight:bold; padding: 8px;">Horário de Início</td>
+                <td rowspan="2" style="text-align:center; font-weight:bold; padding: 8px; background-color: #f8f8f8;">Temperatura</td>
+                <td colspan="5" style="text-align:center; font-weight:bold; padding: 8px; background-color: #f8f8f8;">Horário de Início</td>
             </tr>
             <tr>
-                <td style="text-align:center; font-weight:bold; padding: 8px;">Muito Cedo</td>
-                <td style="text-align:center; font-weight:bold; padding: 8px;">Cedo</td>
-                <td style="text-align:center; font-weight:bold; padding: 8px;">Na Hora</td>
-                <td style="text-align:center; font-weight:bold; padding: 8px;">Atrasado</td>
-                <td style="text-align:center; font-weight:bold; padding: 8px;">Muito Atrasado</td>
+                <td style="text-align:center; font-weight:bold; padding: 8px; background-color: #f0f0f0;">Muito Cedo</td>
+                <td style="text-align:center; font-weight:bold; padding: 8px; background-color: #f0f0f0;">Cedo</td>
+                <td style="text-align:center; font-weight:bold; padding: 8px; background-color: #f0f0f0;">Na Hora</td>
+                <td style="text-align:center; font-weight:bold; padding: 8px; background-color: #f0f0f0;">Atrasado</td>
+                <td style="text-align:center; font-weight:bold; padding: 8px; background-color: #f0f0f0;">Muito Atrasado</td>
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td style="text-align:left; padding: 8px; font-weight:bold;">Morador 1 (Ex: Pai)</td>
-                <td colspan="5" style="text-align:center; padding: 8px;">*Ver Regra 1 (Mais sensível ao frio e pontual)*</td>
-            </tr>
-            <tr>
-                <td style="text-align:left; padding: 8px; font-weight:bold;">Morador 2 (Ex: Mãe)</td>
-                <td colspan="5" style="text-align:center; padding: 8px;">*Ver Regra 2 (Uso mais longo em temperaturas altas)*</td>
-            </tr>
-            <tr>
-                <td style="text-align:left; padding: 8px; font-weight:bold;">Morador 3+ (Ex: Filho)</td>
-                <td colspan="5" style="text-align:center; padding: 8px;">*Ver Regra 3 (Mais tolerante a atrasos e não toma banho no frio)*</td>
-            </tr>
-        </tbody>
-    </table>
-    <br>
-    **Exemplo (Regra 1 - Morador 1):**
-    <table border="1" style="width:100%; border-collapse: collapse;">
-        <thead>
-            <tr>
-                <td rowspan="2" style="text-align:center; font-weight:bold; padding: 8px;">Temperatura</td>
-                <td colspan="5" style="text-align:center; font-weight:bold; padding: 8px;">Horário de Início</td>
-            </tr>
-            <tr>
-                <td style="text-align:center; font-weight:bold; padding: 8px;">Muito Cedo</td>
-                <td style="text-align:center; font-weight:bold; padding: 8px;">Cedo</td>
-                <td style="text-align:center; font-weight:bold; padding: 8px;">Na Hora</td>
-                <td style="text-align:center; font-weight:bold; padding: 8px;">Atrasado</td>
-                <td style="text-align:center; font-weight:bold; padding: 8px;">Muito Atrasado</td>
-            </tr>
-        </thead>
-        <tbody>
-""" +
-"".join([
-    f"""
-    <tr>
-        <td style="text-align:left; padding: 8px; font-weight:bold;">{temp}</td>
-        <td style="text-align:center; padding: 8px; background-color: #f0f0f0;">{df_regras_display.loc[i, 'Muito Cedo']}</td>
-        <td style="text-align:center; padding: 8px; background-color: #f0f0f0;">{df_regras_display.loc[i, 'Cedo']}</td>
-        <td style="text-align:center; padding: 8px; background-color: #f0f0f0;">{df_regras_display.loc[i, 'Na Hora']}</td>
-        <td style="text-align:center; padding: 8px; background-color: #f0f0f0;">{df_regras_display.loc[i, 'Atrasado']}</td>
-        <td style="text-align:center; padding: 8px; background-color: #f0f0f0;">{df_regras_display.loc[i, 'Muito Atrasado']}</td>
-    </tr>
-    """ for i, temp in enumerate(df_regras_display['Temperatura'])
-]) +
-"""
+    """
+    
+    for i, row in df_regras_display.iterrows():
+        html_content += f"""
+        <tr>
+            <td style="text-align:left; padding: 8px; font-weight:bold;">{row['Temperatura']}</td>
+            <td style="text-align:center; padding: 8px;">{row['Muito Cedo']}</td>
+            <td style="text-align:center; padding: 8px;">{row['Cedo']}</td>
+            <td style="text-align:center; padding: 8px;">{row['Na Hora']}</td>
+            <td style="text-align:center; padding: 8px;">{row['Atrasado']}</td>
+            <td style="text-align:center; padding: 8px;">{row['Muito Atrasado']}</td>
+        </tr>
+        """
+    
+    html_content += """
         </tbody>
     </table>
     </div>
-    <br>
+    </div>
+    """
+    return html_content
+
+st.markdown("---")
+st.header("Resumo das Regras Fuzzy de Duração do Banho")
+
+# Tabela 1: Resumo das Regras para as Opções 1, 2, 3
+st.write(
+    """
+    **Tabela de Opções de Regras (Duração do Banho em Minutos)**
+    <div style="overflow-x:auto;">
+    <table border="1" style="width:100%; border-collapse: collapse; font-size: 14px;">
+        <thead>
+            <tr>
+                <td rowspan="2" style="text-align:center; font-weight:bold; padding: 8px; background-color: #f8f8f8;">Regras</td>
+                <td colspan="5" style="text-align:center; font-weight:bold; padding: 8px; background-color: #f8f8f8;">Resumo</td>
+            </tr>
+            <tr>
+                <td style="text-align:center; font-weight:bold; padding: 8px; background-color: #f0f0f0;">1</td>
+                <td style="text-align:center; font-weight:bold; padding: 8px; background-color: #f0f0f0;">2</td>
+                <td style="text-align:center; font-weight:bold; padding: 8px; background-color: #f0f0f0;">3</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="text-align:left; padding: 8px; font-weight:bold;">1</td>
+                <td colspan="3" style="text-align:center; padding: 8px;">Mais sensível ao frio e pontual (Regra 1)</td>
+            </tr>
+            <tr>
+                <td style="text-align:left; padding: 8px; font-weight:bold;">2</td>
+                <td colspan="3" style="text-align:center; padding: 8px;">Uso mais longo em temperaturas altas (Regra 2)</td>
+            </tr>
+            <tr>
+                <td style="text-align:left; padding: 8px; font-weight:bold;">3</td>
+                <td colspan="3" style="text-align:center; padding: 8px;">Mais tolerante a atrasos e não toma banho no frio (Regra 3)</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
     """
 , unsafe_allow_html=True)
+st.markdown("---")
+
+
+# Tabela 2: Regras da Opção 1 (Detalhe)
+st.markdown(criar_tabela_regra("Regras da Opção 1 (Morador 1: Ex: Pai)", regras_morador_1_display), unsafe_allow_html=True)
+
+# Tabela 3: Regras da Opção 2 (Detalhe)
+st.markdown(criar_tabela_regra("Regras da Opção 2 (Morador 2: Ex: Mãe)", regras_morador_2_display), unsafe_allow_html=True)
+
+# Tabela 4: Regras da Opção 3 (Detalhe)
+st.markdown(criar_tabela_regra("Regras da Opção 3 (Morador 3+: Ex: Filho)", regras_morador_3_display), unsafe_allow_html=True)
+
 st.markdown("---")
 # --- FIM DA ALTERAÇÃO 3 ---
 
@@ -474,15 +512,17 @@ for apt_num in range(1, total_apartamentos + 1):
             'fim_pia_simulacao': 0, # Variável para armazenar o fim da pia na simulação (necessário para a lógica da MLR)
             'inicio_banho_sorteado': 0 # NOVO: Armazena o tempo sorteado para ordenação
         })
+    moradores_no_apartamento.append(morador_num_no_apt)
     moradores_predio.extend(moradores_no_apartamento)
 
 # Randomly select one resident per apartment to use the sink and one for the washing machine
 # Group residents by apartment for easier selection
 moradores_por_apartamento_dict = {}
 for morador in moradores_predio:
-    if morador['apartamento'] not in moradores_por_apartamento_dict:
-        moradores_por_apartamento_dict[morador['apartamento']] = []
-    moradores_por_apartamento_dict[morador['apartamento']].append(morador)
+    if isinstance(morador, dict): # Ensure it's a resident dictionary, not the number appended above
+        if morador['apartamento'] not in moradores_por_apartamento_dict:
+            moradores_por_apartamento_dict[morador['apartamento']] = []
+        moradores_por_apartamento_dict[morador['apartamento']].append(morador)
 
 # Randomly select one resident to use the sink and one for the washing machine in each apartment
 for apt_num, lista_moradores_apt in moradores_por_apartamento_dict.items():
@@ -497,7 +537,10 @@ for apt_num, lista_moradores_apt in moradores_por_apartamento_dict.items():
         morador_usa_mlr['usa_mlr'] = True
 
 # The final list of residents for the simulation is 'moradores_predio'
+# Filter to only keep the resident dictionaries for simulation
+moradores_predio = [m for m in moradores_predio if isinstance(m, dict)]
 st.write(f"Lista criada com {len(moradores_predio)} moradores para todo o prédio.")
+
 
 # Calculate the total number of bathrooms in the building (assuming each apartment has the same quantity)
 total_banheiros_predio = total_apartamentos * quantidade_banheiros_por_apartamento
