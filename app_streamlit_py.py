@@ -15,7 +15,7 @@ def calcular_tempo_enchimento(volume_litros, vazao_L_por_s):
     """Calcula o tempo (em segundos) necessário para encher a máquina."""
     # CORREÇÃO: vazao_L_por_s estava como vazao_L_par_s na versão anterior.
     if vazao_L_por_s > 0:
-        return volume_litros / vazao_L_par_s
+        return volume_litros / vazao_L_por_s
     return 0
 
 # Define the main title of the application
@@ -28,12 +28,11 @@ considerando o comportamento fuzzy dos moradores em relação ao uso do chuveiro
 variando a temperatura ambiente.
 """)
 
-# --- INÍCIO DA ALTERAÇÃO 1: Tabela de Regras e Descrição (Genericizada e em Português) ---
+# --- INÍCIO DA Tabela de Regras e Descrição (Genericizada e em Português) ---
 st.subheader("Tabela de Regras Fuzzy por Tipo de Morador")
 # Tabela indicando as regras (1=Regra 1, 2=Regra 2, 3=Regra 3)
 data = {
     'Opção': [1, 2, 3],
-    # MUDANÇA: Remoção da identificação familiar
     'Tipo de Regra': ['Regra 1', 'Regra 2', 'Regra 3'],
     'Descrição da Regra': [
         'Rotina mais previsível, menos afetado pela temperatura e horário. Assume banho mais rápido em temperaturas extremas.',
@@ -48,7 +47,7 @@ st.table(df_regras.set_index('Opção'))
 
 st.write("Utilize a barra lateral para configurar os parâmetros da simulação, incluindo a escolha da regra fuzzy para cada morador do apartamento.")
 
-# Adiciona a tabela de regras traduzida e formatada (REMOVENDO (Antigo X))
+# Adiciona a tabela de regras traduzida e formatada
 st.markdown("""
 ### Regras de Duração do Banho (Minutos)
 | **Temperatura** | **Hora de Início** | **Muito cedo** | **Cedo** | **Na Hora** | **Atrasado** | **Muito atrasado** |
@@ -69,7 +68,7 @@ st.markdown("""
 | | Quente | Longo | Normal | Longo | Rápido | Sem banho |
 | | Muito quente | Longo | Normal | Longo | Muito rápido | Sem banho |
 """)
-# --- FIM DA ALTERAÇÃO 1 ---
+# --- FIM DA Tabela de Regras e Descrição ---
 
 
 # Create a sidebar for user inputs
@@ -93,13 +92,12 @@ def diferenca_tempo_em_segundos(horario_str1, horario_str2):
 
 # Passo 0: Configurando parâmetros do prédio e simulação (inputs do Streamlit)
 st.sidebar.subheader("Parâmetros do Prédio")
-apartamentos_por_pavimento = st.sidebar.number_input("Apartamentos por pavimento:", min_value=1, value=4, step=1)
+apartamentos_par_pavimento = st.sidebar.number_input("Apartamentos por pavimento:", min_value=1, value=4, step=1)
 quantidade_pavimentos = st.sidebar.number_input("Quantidade de pavimentos:", min_value=1, value=10, step=1)
-# CORREÇÃO DO NAMERROR AQUI
 quantidade_moradores_por_apartamento = st.sidebar.number_input("Quantidade de moradores por apartamento:", min_value=1, value=5, step=1)
 quantidade_banheiros_por_apartamento = st.sidebar.number_input("Quantidade de banheiros por apartamento:", min_value=1, value=2, step=1)
 
-# --- INÍCIO DA ALTERAÇÃO 2: Ajuste do texto de instrução na Sidebar e do Map de Nomes ---
+# --- INÍCIO DA Configuração das Regras Fuzzy na Sidebar ---
 st.sidebar.markdown("---")
 st.sidebar.subheader("Configuração das Regras Fuzzy")
 
@@ -109,7 +107,8 @@ st.sidebar.markdown("""
 """)
 
 # Cria uma lista para armazenar as regras escolhidas
-regras_por_morador = []
+regras_por_morador = [] # NOME CORRETO DA LISTA
+
 # Mapeamento de nomes para as regras (Apenas para o texto de 'Regra Padrão')
 regras_map_nome = {1: "Regra 1", 2: "Regra 2", 3: "Regra 3"}
 regras_default = {1: 1, 2: 2}
@@ -126,9 +125,10 @@ for i in range(1, quantidade_moradores_por_apartamento + 1):
         index=default_value - 1, # Define o valor padrão
         key=f"regra_morador_{i}"
     )
-    regras_par_morador.append(regra_escolhida)
+    # LINHA 129 CORRIGIDA: Usa o nome correto da lista
+    regras_por_morador.append(regra_escolhida)
 
-# --- FIM DA ALTERAÇÃO 2: Ajuste do texto de instrução na Sidebar e do Map de Nomes ---
+# --- FIM DA Configuração das Regras Fuzzy na Sidebar ---
 
 
 st.sidebar.markdown("---") # Separator
@@ -169,7 +169,7 @@ st.sidebar.write(f"Temperaturas a serem simuladas: {temperaturas}")
 st.sidebar.markdown("---") # Separator
 st.sidebar.subheader("Parâmetros da Simulação Monte Carlo")
 
-# --- INÍCIO DA ALTERAÇÃO 2: CRITÉRIO DE PARADA ESTATÍSTICO ---
+# --- INÍCIO DA LÓGICA DE CONVERGÊNCIA ---
 # O parâmetro 'Simulações mínimas' vira o número mínimo de lotes (M_min)
 n_lotes_minimo = st.sidebar.number_input("Lotes Mínimos para Teste Estatístico (M):", min_value=1, value=30, step=1)
 
@@ -181,7 +181,7 @@ limiar_convergencia = st.sidebar.number_input("Erro Padrão Aceitável do P95 (T
 
 # Número máximo de simulações (mantido como salvaguarda)
 n_simulacoes_maximo = st.sidebar.number_input("Máximo de Simulações (Salvaguarda):", min_value=1, value=5000, step=100)
-# --- FIM DA ALTERAÇÃO 2 ---
+# --- FIM DA LÓGICA DE CONVERGÊNCIA ---
 
 st.sidebar.markdown("---") # Separator
 # Removed the checkbox for showing membership functions
@@ -234,9 +234,6 @@ duracao_do_banho['Long'] = fuzz.trimf(duracao_do_banho.universe, [10, 15, 15])
 
 
 # Passo 5: Regras fuzzy (Mantido como antes) - sem alteração nos conjuntos de regras
-# NOTA: Estes conjuntos de regras DEVEM manter a ordem 1, 2, 3 para Pai, Mãe, Filho,
-# pois o mapeamento no final do código (rules_map) e a lógica de seleção de regras
-# (regras_por_morador) dependem dessa ordem.
 morador_1_rules = [
     ctrl.Rule(temperatura_do_ar['Very cold'] & inicio_do_banho['Very early'], duracao_do_banho['Very fast']),
     ctrl.Rule(temperatura_do_ar['Cold'] & inicio_do_banho['Very early'], duracao_do_banho['Fast']),
@@ -298,7 +295,7 @@ morador_2_rules = [
     ctrl.Rule(temperatura_do_ar['Very cold'] & inicio_do_banho['Very delayed'], duracao_do_banho['No shower']),
     ctrl.Rule(temperatura_do_ar['Cold'] & inicio_do_banho['Very delayed'], duracao_do_banho['No shower']),
     ctrl.Rule(temperatura_do_ar['Pleasant'] & inicio_do_banho['Very delayed'], duracao_do_banho['No shower']),
-    ctrl.Rule(temperatura_do_ar['Hot'] & inicio_do_banho['Very delayed'], duracao_do_banho['No shower']),
+    ctrl.Rule(temperatura_ar['Hot'] & inicio_do_banho['Very delayed'], duracao_do_banho['No shower']),
     ctrl.Rule(temperatura_do_ar['Very hot'] & inicio_do_banho['Very delayed'], duracao_do_banho['No shower'])
 ]
 
@@ -380,7 +377,6 @@ volumes_maquina_lavar = {
 
 # Cria a lista de todos os moradores do prédio com suas características e apartamento
 total_apartamentos = apartamentos_par_pavimento * quantidade_pavimentos
-# CORREÇÃO DO NAMERROR AQUI
 total_moradores_predio = total_apartamentos * quantidade_moradores_por_apartamento
 
 st.write(f"Calculando moradores para {total_apartamentos} apartamentos com {quantidade_moradores_por_apartamento} moradores por apartamento...")
@@ -390,10 +386,9 @@ moradores_predio = []
 # Creating the list of all residents, identified by apartment, type, and rule chosen by the user
 for apt_num in range(1, total_apartamentos + 1):
     moradores_no_apartamento = []
-    # LINHA 479 (ANTES ERA 116): CORREÇÃO DO NAMERROR AQUI
     for morador_num_no_apt in range(1, quantidade_moradores_por_apartamento + 1):
         # Determine the resident type based on the user's choice
-        tipo_regra_escolhida = regras_por_morador[morador_num_no_apt - 1]
+        tipo_regra_escolhida = regras_par_morador[morador_num_no_apt - 1]
         
         moradores_no_apartamento.append({
             'nome': f'Morador {morador_num_no_apt}', # Identificador no apartamento
@@ -575,7 +570,7 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
 
                         # --- INÍCIO DA LÓGICA DE FILA DE ESPERA (ALTERAÇÃO PRINCIPAL) ---
                         apt_num = m['apartamento']
-                        primeiro_indice_banheiro_apt = (apt_num - 1) * quantidade_banheiros_por_apartamento
+                        primeiro_indice_banheiro_apt = (apt_num - 1) * quantidade_banheiros_par_apartamento
                         ultimo_indice_banheiro_apt = primeiro_indice_banheiro_apt + quantidade_banheiros_por_apartamento - 1
 
                         # 1. Encontrar o banheiro que ficará livre mais cedo dentro do apartamento
@@ -693,7 +688,7 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                 # Add the flow rate time series of this simulation to the results list for this temperature
                 resultados_vazao_temperatura.append(vazao_simulacao)
 
-                # --- INÍCIO DA ALTERAÇÃO 3: LÓGICA DE CONVERGÊNCIA POR ERRO PADRÃO DO P95 ---
+                # --- INÍCIO DA LÓGICA DE CONVERGÊNCIA POR ERRO PADRÃO DO P95 ---
                 # A verificação ocorre apenas se o número de simulações for um múltiplo de k
                 if (i + 1) % tamanho_do_lote_k == 0:
                     
@@ -749,7 +744,7 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                     if i + 1 == n_simulacoes_maximo and not convergencia_atingida:
                         st.warning(f"Número máximo de simulações ({n_simulacoes_maximo}) atingido sem convergência para {temperatura_atual}°C. EP(P95) final: {erro_padrao_p95:.4f} L/s.")
                         break
-                # --- FIM DA ALTERAÇÃO 3: LÓGICA DE CONVERGÊNCIA POR ERRO PADRÃO DO P95 ---
+                # --- FIM DA LÓGICA DE CONVERGÊNCIA POR ERRO PADRÃO DO P95 ---
 
 
             # Após todas as simulações, se for a primeira temperatura e 1 apartamento, salva o relatório final
