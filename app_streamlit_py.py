@@ -141,15 +141,15 @@ st.write(
         <tbody>
             <tr>
                 <td style="text-align:left; padding: 8px; font-weight:bold;">1</td>
-                <td colspan="3" style="text-align:center; padding: 8px;">Mais sensível ao frio e pontual (Regra 1)</td>
+                <td colspan="3" style="text-align:center; padding: 8px;">Mais sensível ao frio e pontual </td>
             </tr>
             <tr>
                 <td style="text-align:left; padding: 8px; font-weight:bold;">2</td>
-                <td colspan="3" style="text-align:center; padding: 8px;">Uso mais longo em temperaturas altas (Regra 2)</td>
+                <td colspan="3" style="text-align:center; padding: 8px;">Uso mais longo em temperaturas altas </td>
             </tr>
             <tr>
                 <td style="text-align:left; padding: 8px; font-weight:bold;">3</td>
-                <td colspan="3" style="text-align:center; padding: 8px;">Mais tolerante a atrasos e não toma banho no frio (Regra 3)</td>
+                <td colspan="3" style="text-align:center; padding: 8px;">Mais tolerante a atrasos e não toma banho no frio </td>
             </tr>
         </tbody>
     </table>
