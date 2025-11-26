@@ -14,7 +14,7 @@ import io
 def calcular_tempo_enchimento(volume_litros, vazao_L_por_s):
     """Calcula o tempo (em segundos) necessário para encher a máquina."""
     if vazao_L_por_s > 0:
-        return volume_litros / vazao_L_por_s
+        return volume_litros / vazao_L_par_s
     return 0
 
 # Define the main title of the application
@@ -27,7 +27,7 @@ considerando o comportamento fuzzy dos moradores em relação ao uso do chuveiro
 variando a temperatura ambiente.
 """)
 
-# --- INÍCIO DA ALTERAÇÃO 1: Tabela de Regras e Descrição (Genericizada) ---
+# --- INÍCIO DA ALTERAÇÃO 1: Tabela de Regras e Descrição (Genericizada e em Português) ---
 st.subheader("Tabela de Regras Fuzzy por Tipo de Morador")
 # Tabela indicando as regras (1=Regra 1, 2=Regra 2, 3=Regra 3)
 data = {
@@ -47,25 +47,26 @@ st.table(df_regras.set_index('Opção'))
 
 st.write("Utilize a barra lateral para configurar os parâmetros da simulação, incluindo a escolha da regra fuzzy para cada morador do apartamento.")
 
-# Adiciona a imagem de referência (adaptada para texto em português e sem identificação familiar)
+# Adiciona a tabela de regras traduzida e com a simulação de mesclagem
 st.markdown("""
-| Opção | Temperatura | Muito cedo (Very early) | Cedo (Early) | Na Hora (On time) | Atrasado (Delayed) | Muito atrasado (Very delayed) |
-|---|---|---|---|---|---|---|
-| **Regra 1** | Muito frio (Very cold) | Muito rápido (Very fast) | Muito rápido (Very fast) | Muito rápido (Very fast) | Sem banho (No shower) | Sem banho (No shower) |
-| **Regra 1** | Frio (Cold) | Rápido (Fast) | Rápido (Fast) | Rápido (Fast) | Sem banho (No shower) | Sem banho (No shower) |
-| **Regra 1** | Agradável (Pleasant) | Normal | Normal | Rápido (Fast) | Sem banho (No shower) | Sem banho (No shower) |
-| **Regra 1** | Quente (Hot) | Normal | Normal | Normal | Sem banho (No shower) | Sem banho (No shower) |
-| **Regra 1** | Muito quente (Very hot) | Longo (Long) | Longo (Long) | Normal | Muito rápido (Very fast) | Sem banho (No shower) |
-| **Regra 2** | Muito frio (Very cold) | Muito rápido (Very fast) | Muito rápido (Very fast) | Muito rápido (Very fast) | Sem banho (No shower) | Sem banho (No shower) |
-| **Regra 2** | Frio (Cold) | Rápido (Fast) | Rápido (Fast) | Rápido (Fast) | Sem banho (No shower) | Sem banho (No shower) |
-| **Regra 2** | Agradável (Pleasant) | Rápido (Fast) | Rápido (Fast) | Rápido (Fast) | Sem banho (No shower) | Sem banho (No shower) |
-| **Regra 2** | Quente (Hot) | Normal | Normal | Normal | Muito rápido (Very fast) | Sem banho (No shower) |
-| **Regra 2** | Muito quente (Very hot) | Normal | Longo (Long) | Normal | Muito rápido (Very fast) | Sem banho (No shower) |
-| **Regra 3** | Muito frio (Very cold) | Sem banho (No shower) | Sem banho (No shower) | Sem banho (No shower) | Sem banho (No shower) | Sem banho (No shower) |
-| **Regra 3** | Frio (Cold) | Sem banho (No shower) | Sem banho (No shower) | Sem banho (No shower) | Sem banho (No shower) | Sem banho (No shower) |
-| **Regra 3** | Agradável (Pleasant) | Rápido (Fast) | Normal | Normal | Sem banho (No shower) | Sem banho (No shower) |
-| **Regra 3** | Quente (Hot) | Longo (Long) | Normal | Longo (Long) | Rápido (Fast) | Sem banho (No shower) |
-| **Regra 3** | Muito quente (Very hot) | Longo (Long) | Normal | Longo (Long) | Muito rápido (Very fast) | Sem banho (No shower) |
+### Regras de Duração do Banho (Minutos)
+| **Temperatura** | **Hora de Início** | **Muito cedo** | **Cedo** | **Na Hora** | **Atrasado** | **Muito atrasado** |
+|:---|:---|:---|:---|:---|:---|:---|
+| **Regra 1** | Muito frio | Muito rápido | Muito rápido | Muito rápido | Sem banho | Sem banho |
+| (Antigo Pai) | Frio | Rápido | Rápido | Rápido | Sem banho | Sem banho |
+| | Agradável | Normal | Normal | Rápido | Sem banho | Sem banho |
+| | Quente | Normal | Normal | Normal | Sem banho | Sem banho |
+| | Muito quente | Longo | Longo | Normal | Muito rápido | Sem banho |
+| **Regra 2** | Muito frio | Muito rápido | Muito rápido | Muito rápido | Sem banho | Sem banho |
+| (Antiga Mãe) | Frio | Rápido | Rápido | Rápido | Sem banho | Sem banho |
+| | Agradável | Rápido | Rápido | Rápido | Sem banho | Sem banho |
+| | Quente | Normal | Normal | Normal | Muito rápido | Sem banho |
+| | Muito quente | Normal | Longo | Normal | Muito rápido | Sem banho |
+| **Regra 3** | Muito frio | Sem banho | Sem banho | Sem banho | Sem banho | Sem banho |
+| (Antigo Filho) | Frio | Sem banho | Sem banho | Sem banho | Sem banho | Sem banho |
+| | Agradável | Rápido | Normal | Normal | Sem banho | Sem banho |
+| | Quente | Longo | Normal | Longo | Rápido | Sem banho |
+| | Muito quente | Longo | Normal | Longo | Muito rápido | Sem banho |
 """)
 # --- FIM DA ALTERAÇÃO 1 ---
 
@@ -93,7 +94,7 @@ def diferenca_tempo_em_segundos(horario_str1, horario_str2):
 st.sidebar.subheader("Parâmetros do Prédio")
 apartamentos_por_pavimento = st.sidebar.number_input("Apartamentos por pavimento:", min_value=1, value=4, step=1)
 quantidade_pavimentos = st.sidebar.number_input("Quantidade de pavimentos:", min_value=1, value=10, step=1)
-quantidade_moradores_por_apartamento = st.sidebar.number_input("Quantidade de moradores por apartamento:", min_value=1, value=5, step=1)
+quantidade_moradores_par_apartamento = st.sidebar.number_input("Quantidade de moradores por apartamento:", min_value=1, value=5, step=1)
 quantidade_banheiros_por_apartamento = st.sidebar.number_input("Quantidade de banheiros por apartamento:", min_value=1, value=2, step=1)
 
 # --- INÍCIO DA ALTERAÇÃO 2: Ajuste do texto de instrução na Sidebar e do Map de Nomes ---
@@ -331,9 +332,9 @@ morador_3_rules = [
 
 # Mapeia o TIPO de morador para o conjunto de regras
 rules_map = {
-    1: morador_1_rules, # Regra 1 (antigo Pai)
-    2: morador_2_rules, # Regra 2 (antiga Mãe)
-    3: morador_3_rules  # Regra 3 (antigo Filho)
+    1: morador_1_rules, # Regra 1
+    2: morador_2_rules, # Regra 2
+    3: morador_3_rules  # Regra 3
 }
 
 # Cria UMA lista de simuladores (três, um para cada conjunto de regras)
@@ -373,7 +374,7 @@ volumes_maquina_lavar = {
 
 
 # Cria a lista de todos os moradores do prédio com suas características e apartamento
-total_apartamentos = apartamentos_por_pavimento * quantidade_pavimentos
+total_apartamentos = apartamentos_par_pavimento * quantidade_pavimentos
 total_moradores_predio = total_apartamentos * quantidade_moradores_por_apartamento
 
 st.write(f"Calculando moradores para {total_apartamentos} apartamentos com {quantidade_moradores_por_apartamento} moradores por apartamento...")
@@ -400,14 +401,14 @@ for apt_num in range(1, total_apartamentos + 1):
 
 # Randomly select one resident per apartment to use the sink and one for the washing machine
 # Group residents by apartment for easier selection
-moradores_por_apartamento_dict = {}
+moradores_par_apartamento_dict = {}
 for morador in moradores_predio:
-    if morador['apartamento'] not in moradores_por_apartamento_dict:
-        moradores_por_apartamento_dict[morador['apartamento']] = []
-    moradores_por_apartamento_dict[morador['apartamento']].append(morador)
+    if morador['apartamento'] not in moradores_par_apartamento_dict:
+        moradores_par_apartamento_dict[morador['apartamento']] = []
+    moradores_par_apartamento_dict[morador['apartamento']].append(morador)
 
 # Randomly select one resident to use the sink and one for the washing machine in each apartment
-for apt_num, lista_moradores_apt in moradores_por_apartamento_dict.items():
+for apt_num, lista_moradores_apt in moradores_par_apartamento_dict.items():
     if lista_moradores_apt: # Ensures there are residents in the apartment
         # Kitchen Sink Selection (existing logic)
         morador_usa_pia = random.choice(lista_moradores_apt)
@@ -438,7 +439,7 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
         temp_counter = 0
 
         # Dictionary to store results (flow rate, statistics, etc.) for each temperature
-        resultados_por_temperatura = {}
+        resultados_par_temperatura = {}
 
         for temperatura_atual in temperaturas:
             st.subheader(f"Simulação para Temperatura: {temperatura_atual}°C")
@@ -763,7 +764,7 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
 
 
             # Store the statistical results and time series for this temperature
-            resultados_por_temperatura[temperatura_atual] = {
+            resultados_par_temperatura[temperatura_atual] = {
                 'media_ts': media_vazao_ts, # Mean time series
                 'p5_ts': p5_vazao_ts,        # P5 time series
                 'p95_ts': p95_vazao_ts,      # P95 time series
@@ -819,7 +820,7 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
         st.markdown("---") # Separator
         st.header("Resultados da Simulação")
 
-        for temperatura_atual, resultados in resultados_por_temperatura.items():
+        for temperatura_atual, resultados in resultados_par_temperatura.items():
             st.subheader(f"Temperatura: {temperatura_atual}°C")
             fig, ax = plt.subplots(figsize=(12, 4))
             ax.plot(resultados['tempo'], resultados['media_ts'], label='Média Vazão')
