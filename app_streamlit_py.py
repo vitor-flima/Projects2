@@ -27,6 +27,27 @@ considerando o comportamento fuzzy dos moradores em relação ao uso do chuveiro
 variando a temperatura ambiente.
 """)
 
+# --- INÍCIO DA ALTERAÇÃO 1: Tabela de Regras e Descrição ---
+st.subheader("Tabela de Regras Fuzzy por Tipo de Morador")
+# Tabela indicando as regras (1=Pai, 2=Mãe, 3=Filho)
+data = {
+    'Opção': [1, 2, 3],
+    'Tipo de Morador': ['Pai', 'Mãe', 'Filho (3+)',],
+    'Descrição da Regra': [
+        'Rotina mais previsível, menos afetado pela temperatura e horário. Assume banho mais rápido em temperaturas extremas.',
+        'Rotina um pouco mais flexível, sensível ao horário. Assume banho normal ou longo em temperaturas quentes e frio mais rápido.',
+        'Rotina mais flexível e mais afetado pela temperatura e horário. Alta probabilidade de não tomar banho no frio/muito cedo e banho mais longo no calor/horário de pico.'
+    ]
+}
+df_regras = pd.DataFrame(data)
+
+# Exibe a tabela no corpo principal do app
+st.table(df_regras.set_index('Opção'))
+
+st.write("Utilize a barra lateral para configurar os parâmetros da simulação, incluindo a escolha da regra fuzzy para cada morador do apartamento.")
+# --- FIM DA ALTERAÇÃO 1 ---
+
+
 # Create a sidebar for user inputs
 st.sidebar.title("Configurações da Simulação")
 st.sidebar.markdown("---") # Separator
@@ -53,13 +74,13 @@ quantidade_pavimentos = st.sidebar.number_input("Quantidade de pavimentos:", min
 quantidade_moradores_por_apartamento = st.sidebar.number_input("Quantidade de moradores por apartamento:", min_value=1, value=5, step=1)
 quantidade_banheiros_por_apartamento = st.sidebar.number_input("Quantidade de banheiros por apartamento:", min_value=1, value=2, step=1)
 
-# --- INÍCIO DA ALTERAÇÃO 1: Configuração das Regras Fuzzy por Morador ---
+# --- INÍCIO DA ALTERAÇÃO 2: Ajuste do texto de instrução na Sidebar ---
 st.sidebar.markdown("---")
 st.sidebar.subheader("Configuração das Regras Fuzzy")
 
 # Tabela de opções para o usuário
 st.sidebar.markdown("""
-**Escolha a regra fuzzy para cada morador (1=Pai, 2=Mãe, 3=Filho):**
+**Escolha a regra fuzzy para cada morador (1, 2 ou 3, conforme tabela acima):**
 """)
 
 # Cria uma lista para armazenar as regras escolhidas
@@ -73,14 +94,14 @@ for i in range(1, quantidade_moradores_por_apartamento + 1):
     default_value = regras_default.get(i, 3)
     
     regra_escolhida = st.sidebar.selectbox(
-        f"Morador {i} (Regra padrão: {regras_map_nome.get(default_value)}):",
+        f"Morador {i} (Regra padrão: {regras_map_nome.get(default_value)}) (1, 2 ou 3, conforme tabela acima):",
         options=[1, 2, 3],
         index=default_value - 1, # Define o valor padrão
         key=f"regra_morador_{i}"
     )
     regras_por_morador.append(regra_escolhida)
 
-# --- FIM DA ALTERAÇÃO 1: Configuração das Regras Fuzzy por Morador ---
+# --- FIM DA ALTERAÇÃO 2: Ajuste do texto de instrução na Sidebar ---
 
 
 st.sidebar.markdown("---") # Separator
