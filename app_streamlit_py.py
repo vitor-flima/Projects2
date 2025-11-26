@@ -161,13 +161,13 @@ st.markdown("---")
 
 # Tabela 2: Regras da Opção 1 (Detalhe)
 # Título alterado para "Regras da Opção 1"
-st.markdown(criar_tabela_regra("Regras da Opção 1 (Morador 1: Ex: Pai)", regras_morador_1_display), unsafe_allow_html=True)
+st.markdown(criar_tabela_regra("Regras da Opção 1", regras_morador_1_display), unsafe_allow_html=True)
 
 # Tabela 3: Regras da Opção 2 (Detalhe)
-st.markdown(criar_tabela_regra("Regras da Opção 2 (Morador 2: Ex: Mãe)", regras_morador_2_display), unsafe_allow_html=True)
+st.markdown(criar_tabela_regra("Regras da Opção 2", regras_morador_2_display), unsafe_allow_html=True)
 
 # Tabela 4: Regras da Opção 3 (Detalhe)
-st.markdown(criar_tabela_regra("Regras da Opção 3 (Morador 3+: Ex: Filho)", regras_morador_3_display), unsafe_allow_html=True)
+st.markdown(criar_tabela_regra("Regras da Opção 3", regras_morador_3_display), unsafe_allow_html=True)
 
 st.markdown("---")
 # --- FIM DA ALTERAÇÃO 3 ---
