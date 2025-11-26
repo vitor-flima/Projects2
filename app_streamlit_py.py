@@ -27,12 +27,13 @@ considerando o comportamento fuzzy dos moradores em relação ao uso do chuveiro
 variando a temperatura ambiente.
 """)
 
-# --- INÍCIO DA ALTERAÇÃO 1: Tabela de Regras e Descrição ---
+# --- INÍCIO DA ALTERAÇÃO 1: Tabela de Regras e Descrição (Genericizada) ---
 st.subheader("Tabela de Regras Fuzzy por Tipo de Morador")
-# Tabela indicando as regras (1=Pai, 2=Mãe, 3=Filho)
+# Tabela indicando as regras (1=Regra 1, 2=Regra 2, 3=Regra 3)
 data = {
     'Opção': [1, 2, 3],
-    'Tipo de Morador': ['Pai', 'Mãe', 'Filho (3+)',],
+    # MUDANÇA: Remoção da identificação familiar
+    'Tipo de Regra': ['Regra 1', 'Regra 2', 'Regra 3'],
     'Descrição da Regra': [
         'Rotina mais previsível, menos afetado pela temperatura e horário. Assume banho mais rápido em temperaturas extremas.',
         'Rotina um pouco mais flexível, sensível ao horário. Assume banho normal ou longo em temperaturas quentes e frio mais rápido.',
@@ -41,10 +42,31 @@ data = {
 }
 df_regras = pd.DataFrame(data)
 
-# Exibe a tabela no corpo principal do app
+# Exibe a tabela de descrição no corpo principal do app
 st.table(df_regras.set_index('Opção'))
 
 st.write("Utilize a barra lateral para configurar os parâmetros da simulação, incluindo a escolha da regra fuzzy para cada morador do apartamento.")
+
+# Adiciona a imagem de referência (adaptada para texto em português e sem identificação familiar)
+st.markdown("""
+| Opção | Temperatura | Muito cedo (Very early) | Cedo (Early) | Na Hora (On time) | Atrasado (Delayed) | Muito atrasado (Very delayed) |
+|---|---|---|---|---|---|---|
+| **Regra 1** | Muito frio (Very cold) | Muito rápido (Very fast) | Muito rápido (Very fast) | Muito rápido (Very fast) | Sem banho (No shower) | Sem banho (No shower) |
+| **Regra 1** | Frio (Cold) | Rápido (Fast) | Rápido (Fast) | Rápido (Fast) | Sem banho (No shower) | Sem banho (No shower) |
+| **Regra 1** | Agradável (Pleasant) | Normal | Normal | Rápido (Fast) | Sem banho (No shower) | Sem banho (No shower) |
+| **Regra 1** | Quente (Hot) | Normal | Normal | Normal | Sem banho (No shower) | Sem banho (No shower) |
+| **Regra 1** | Muito quente (Very hot) | Longo (Long) | Longo (Long) | Normal | Muito rápido (Very fast) | Sem banho (No shower) |
+| **Regra 2** | Muito frio (Very cold) | Muito rápido (Very fast) | Muito rápido (Very fast) | Muito rápido (Very fast) | Sem banho (No shower) | Sem banho (No shower) |
+| **Regra 2** | Frio (Cold) | Rápido (Fast) | Rápido (Fast) | Rápido (Fast) | Sem banho (No shower) | Sem banho (No shower) |
+| **Regra 2** | Agradável (Pleasant) | Rápido (Fast) | Rápido (Fast) | Rápido (Fast) | Sem banho (No shower) | Sem banho (No shower) |
+| **Regra 2** | Quente (Hot) | Normal | Normal | Normal | Muito rápido (Very fast) | Sem banho (No shower) |
+| **Regra 2** | Muito quente (Very hot) | Normal | Longo (Long) | Normal | Muito rápido (Very fast) | Sem banho (No shower) |
+| **Regra 3** | Muito frio (Very cold) | Sem banho (No shower) | Sem banho (No shower) | Sem banho (No shower) | Sem banho (No shower) | Sem banho (No shower) |
+| **Regra 3** | Frio (Cold) | Sem banho (No shower) | Sem banho (No shower) | Sem banho (No shower) | Sem banho (No shower) | Sem banho (No shower) |
+| **Regra 3** | Agradável (Pleasant) | Rápido (Fast) | Normal | Normal | Sem banho (No shower) | Sem banho (No shower) |
+| **Regra 3** | Quente (Hot) | Longo (Long) | Normal | Longo (Long) | Rápido (Fast) | Sem banho (No shower) |
+| **Regra 3** | Muito quente (Very hot) | Longo (Long) | Normal | Longo (Long) | Muito rápido (Very fast) | Sem banho (No shower) |
+""")
 # --- FIM DA ALTERAÇÃO 1 ---
 
 
@@ -74,7 +96,7 @@ quantidade_pavimentos = st.sidebar.number_input("Quantidade de pavimentos:", min
 quantidade_moradores_por_apartamento = st.sidebar.number_input("Quantidade de moradores por apartamento:", min_value=1, value=5, step=1)
 quantidade_banheiros_por_apartamento = st.sidebar.number_input("Quantidade de banheiros por apartamento:", min_value=1, value=2, step=1)
 
-# --- INÍCIO DA ALTERAÇÃO 2: Ajuste do texto de instrução na Sidebar ---
+# --- INÍCIO DA ALTERAÇÃO 2: Ajuste do texto de instrução na Sidebar e do Map de Nomes ---
 st.sidebar.markdown("---")
 st.sidebar.subheader("Configuração das Regras Fuzzy")
 
@@ -85,15 +107,17 @@ st.sidebar.markdown("""
 
 # Cria uma lista para armazenar as regras escolhidas
 regras_por_morador = []
-regras_map_nome = {1: "Pai (Morador 1)", 2: "Mãe (Morador 2)", 3: "Filho (Morador 3+)"}
+# MUDANÇA: Mapeamento de nomes para as regras (Apenas para o texto de 'Regra Padrão')
+regras_map_nome = {1: "Regra 1", 2: "Regra 2", 3: "Regra 3"}
 regras_default = {1: 1, 2: 2}
 
 # Loop para criar o seletor para cada morador
 for i in range(1, quantidade_moradores_por_apartamento + 1):
-    # Regra padrão: Pai (1) para o 1º, Mãe (2) para o 2º, Filho (3) para os demais
+    # Regra padrão: Regra 1 para o 1º, Regra 2 para o 2º, Regra 3 para os demais
     default_value = regras_default.get(i, 3)
     
     regra_escolhida = st.sidebar.selectbox(
+        # MUDANÇA: Título da caixa de seleção genérico e com referência à tabela
         f"Morador {i} (Regra padrão: {regras_map_nome.get(default_value)}) (1, 2 ou 3, conforme tabela acima):",
         options=[1, 2, 3],
         index=default_value - 1, # Define o valor padrão
@@ -101,7 +125,7 @@ for i in range(1, quantidade_moradores_por_apartamento + 1):
     )
     regras_por_morador.append(regra_escolhida)
 
-# --- FIM DA ALTERAÇÃO 2: Ajuste do texto de instrução na Sidebar ---
+# --- FIM DA ALTERAÇÃO 2: Ajuste do texto de instrução na Sidebar e do Map de Nomes ---
 
 
 st.sidebar.markdown("---") # Separator
@@ -307,9 +331,9 @@ morador_3_rules = [
 
 # Mapeia o TIPO de morador para o conjunto de regras
 rules_map = {
-    1: morador_1_rules, # Pai
-    2: morador_2_rules, # Mãe
-    3: morador_3_rules  # Filho
+    1: morador_1_rules, # Regra 1 (antigo Pai)
+    2: morador_2_rules, # Regra 2 (antiga Mãe)
+    3: morador_3_rules  # Regra 3 (antigo Filho)
 }
 
 # Cria UMA lista de simuladores (três, um para cada conjunto de regras)
@@ -486,6 +510,7 @@ if temperaturas and duracao_simulacao > 0 and total_moradores_predio > 0:
                         fim_banho = inicio_banho + dur_banho_segundos # Fim do banho é usado para o cálculo do início da MLR
 
                         # --- LOG: Duração do Banho e Horário Inicial ---
+                        # MUDANÇA: Usando o nome genérico da Regra
                         regra_nome = regras_map_nome.get(m['tipo_regra'])
                         relatorio_simulacao_temp.append(f"[{id_morador}] (Regra: {regra_nome}, Temp: {temperatura_atual}°C) - Horário inicial sorteado: {inicio_banho}s. Duração fuzzy: {dur_banho_minutos:.2f} min ({dur_banho_segundos}s).")
                         
