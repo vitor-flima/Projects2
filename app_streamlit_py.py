@@ -217,11 +217,11 @@ for i in range(1, quantidade_moradores_por_apartamento + 1):
     
     # ALTERAÇÃO DE TEXTO SOLICITADA
     if i == 1:
-        morador_display_name = "Morador 1 (Ex: Pai)"
+        morador_display_name = "Morador 1 "
     elif i == 2:
-        morador_display_name = "Morador 2 (Ex: Mãe)"
+        morador_display_name = "Morador 2 "
     else:
-        morador_display_name = f"Morador {i} (Ex: Filho)"
+        morador_display_name = f"Morador {i} "
         
     regra_escolhida = st.sidebar.selectbox(
         f"{morador_display_name} (Regra padrão: {default_value}):",
